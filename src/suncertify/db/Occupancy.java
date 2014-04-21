@@ -67,7 +67,7 @@ public class Occupancy {
     /**
      * Data Address. Store the offset location in the database file.
      */
-    private long address;
+    //private long address;
 
     /**
      * Deleted Flag. Store the state of the record.
@@ -117,18 +117,32 @@ public class Occupancy {
      */
     private String owner;
 
-
     /**
-     * Creates instance of this object with default values.
+     * Creates instance of this object with field values in the array.
+     *
+     * Fields values are in the order: deleted a byte to set the deleted flag
+     * name the name of the hotel. location the city of the hotel. size the
+     * maximum occupancy of the room. smoking 'Y' if smoking, 'N' if
+     * non-smoking. rate the price per night, contains currency symbol. date the
+     * night to which the record relates to. owner the customer holding this
+     * occupancy.
+     *
+     * @param fields the values stored in reach record
      */
-    public Occupancy() {
-        log.fine("Empty constructor called");
+    public Occupancy(String[] fields) {
+        this.name = name;
+        this.location = location;
+        this.size = size;
+        this.smoking = smoking;
+        this.rate = rate;
+        this.date = date;
+        this.owner = owner;
+        this.deleted = deleted;
     }
 
     /**
      * Creates instance of this class with parameter values.
      *
-     * @param address the record offset in the database file.
      * @param name the name of the hotel.
      * @param location the city of the hotel.
      * @param size the maximum occupancy of the room.
@@ -138,9 +152,8 @@ public class Occupancy {
      * @param owner the customer holding this occupancy.
      * @param deleted a byte to set the deleted flag
      */
-    public Occupancy(long address, String name, String location, short size,
+    public Occupancy(String name, String location, short size,
             char smoking, String rate, Calendar date, String owner, byte deleted) {
-        this.address = address;
         this.name = name;
         this.location = location;
         this.size = size;
@@ -289,7 +302,7 @@ public class Occupancy {
      * @return a byte array for write operations
      */
     public byte[] toRecord() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     /**
@@ -314,9 +327,10 @@ public class Occupancy {
      */
     @Override
     public int hashCode() {
-        int hash = 3;
-        hash = 71 * hash + (int) (this.address ^ (this.address >>> 32));
-        return hash;
+//        int hash = 3;
+//        hash = 71 * hash + (int) (this.address ^ (this.address >>> 32));
+//        return hash;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     /**
@@ -331,14 +345,15 @@ public class Occupancy {
      */
     @Override
     public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final Occupancy other = (Occupancy) obj;
-        return this.address == other.address;
+//        if (obj == null) {
+//            return false;
+//        }
+//        if (getClass() != obj.getClass()) {
+//            return false;
+//        }
+//        final Occupancy other = (Occupancy) obj;
+//        return this.address == other.address;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }

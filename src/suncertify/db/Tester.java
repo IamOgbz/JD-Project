@@ -25,8 +25,16 @@ public class Tester {
             log.log(Level.INFO, "fields: {0}", Data.fields.toString());
             log.log(Level.INFO, "data offset: {0}",
                     String.valueOf(data.dataOffset));
+            String table = "";
+            for(String[] record : data.readData()){
+                table += "\n";
+                for(String field : record){
+                    table += field+" ";
+                }
+            }
+            log.info(table);
         } catch (IOException ex) {
-            Logger.getLogger(Tester.class.getName()).log(Level.SEVERE, null, ex);
+            log.log(Level.SEVERE, null, ex);
         }
     }
 

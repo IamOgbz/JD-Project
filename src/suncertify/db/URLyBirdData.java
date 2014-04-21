@@ -9,7 +9,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import static suncertify.db.Data.dbFile;
+import static suncertify.db.Data.dbRWLock;
 
 /**
  * The class for reading and writing the URLyBird specific database file. Uses
@@ -23,16 +28,6 @@ public class URLyBirdData extends Data {
      * Data file cookie identifier.
      */
     public static int magicCookie;
-
-    /**
-     * The length (in bytes) of each record.
-     */
-    public static int recordLength;
-
-    /**
-     * The number of fields in each record.
-     */
-    public static short numFields;
 
     /**
      * The character encoding used in the URLyBird database file
@@ -91,8 +86,13 @@ public class URLyBirdData extends Data {
      */
     @Override
     public long readHeader() throws IOException {
+        // the offset storing the read operation cursor
         long offset;
-        synchronized (dbFile) {
+        // add deleted flag the fields
+        fields.put("deleted", 1);
+        // prevent write operations from happening while reading
+        dbRWLock.readLock().lock();
+        try {
             // starting location of the header
             offset = 0;
             // go to the offset location in the database file
@@ -112,7 +112,8 @@ public class URLyBirdData extends Data {
             // read schema description
             // loop for number of fields in a record
             String fieldName;
-            short fieldNameLength, fieldLength;
+            int fieldLength;
+            short fieldNameLength;
             for (int i = 0; i < numFields; i++) {
                 // go to beginning of the column definition
                 dbFile.seek(offset);
@@ -136,6 +137,8 @@ public class URLyBirdData extends Data {
                 // or row data if the loop is over
                 offset += FIELD_LENGTH_BYTES;
             }
+        } finally {
+            dbRWLock.readLock().unlock();
         }
         return offset;
     }
