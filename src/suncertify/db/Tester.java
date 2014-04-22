@@ -1,6 +1,7 @@
 package suncertify.db;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,23 +20,28 @@ public class Tester {
         try {
             Data data = new URLyBirdData(dbPath);
             log.log(Level.INFO, "magic cookie: {0}", URLyBirdData.magicCookie);
-            log.log(Level.INFO, "record length: {0}",
-                    URLyBirdData.recordLength);
-            log.log(Level.INFO, "num fields: {0}", URLyBirdData.numFields);
-            log.log(Level.INFO, "fields: {0}", Data.fields.toString());
+            log.log(Level.INFO, "record length: {0}", Data.recordLength);
+            log.log(Level.INFO, "num fields: {0}", Data.numFields);
+            log.log(Level.INFO, "fields: {0}", data.fields.toString());
             log.log(Level.INFO, "data offset: {0}",
                     String.valueOf(data.dataOffset));
             String table = "";
-            for(String[] record : data.readData()){
-                table += "\n";
-                for(String field : record){
-                    table += field+" ";
-                }
+            Collection<String[]> records = data.search("", "Palace");
+            for (String[] record : records) {
+                table += "\n" + toArrayString(record);
             }
             log.info(table);
         } catch (IOException ex) {
             log.log(Level.SEVERE, null, ex);
         }
+    }
+
+    public static String toArrayString(Object[] array) {
+        String s = "";
+        for (Object o : array) {
+            s += "[" + o.toString() + "](" + o.toString().length() + ") ";
+        }
+        return s;
     }
 
 }

@@ -9,12 +9,13 @@ package suncertify.db;
 public interface DBAccess {
 
     /**
-     * Reads a record from the file.
+     * Reads a record from the file. Performing the read operation all at once
+     * is faster than reading individual fields.
      *
      * @param recNo the location of the record in the db file.
      * @return array of string where element is a record value.
-     * @throws RecordNotFoundException if record is not found at location or has
-     * been deleted.
+     * @throws RecordNotFoundException if valid record is not found at location
+     * or has been deleted.
      */
     public String[] readRecord(long recNo)
             throws RecordNotFoundException;
@@ -26,8 +27,8 @@ public interface DBAccess {
      * @param recNo the location of the record in the db file.
      * @param data the array of string where element is a record value.
      * @param lockCookie the cookie returned when record was locked.
-     * @throws RecordNotFoundException if record is not found at location or has
-     * been deleted.
+     * @throws RecordNotFoundException if valid record is not found at location
+     * or has been deleted.
      * @throws SecurityException if the record is locked with a cookie other
      * than lockCookie.
      */
@@ -40,8 +41,8 @@ public interface DBAccess {
      *
      * @param recNo the record location in the db file.
      * @param lockCookie the cookie returned when locking the record
-     * @throws RecordNotFoundException if record is not found at location or has
-     * been deleted.
+     * @throws RecordNotFoundException if valid record is not found at location
+     * or has been deleted.
      * @throws SecurityException if the record is locked with a cookie other
      * than lockCookie.
      */
@@ -81,8 +82,8 @@ public interface DBAccess {
      * @param recNo the record location in the db file.
      * @return the lock cookie to be used when record is unlocked, updated, or
      * deleted.
-     * @throws RecordNotFoundException if record is not found at location or has
-     * been deleted.
+     * @throws RecordNotFoundException if valid record is not found at location
+     * or has been deleted.
      */
     public long lockRecord(long recNo)
             throws RecordNotFoundException;

@@ -7,10 +7,7 @@ package suncertify.db;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import static suncertify.db.Data.dbFile;
@@ -28,11 +25,6 @@ public class URLyBirdData extends Data {
      * Data file cookie identifier.
      */
     public static int magicCookie;
-
-    /**
-     * The character encoding used in the URLyBird database file
-     */
-    public static final Charset ENCODING = StandardCharsets.US_ASCII;
 
     /**
      * The length (in bytes) of the cookie that describes the data file.
@@ -88,8 +80,12 @@ public class URLyBirdData extends Data {
     public long readHeader() throws IOException {
         // the offset storing the read operation cursor
         long offset;
+        // set charater encoding used for the data
+        encoding = StandardCharsets.US_ASCII;
         // add deleted flag the fields
         fields.put("deleted", 1);
+        // the length of the deleted field
+        recordLength = 1;
         // prevent write operations from happening while reading
         dbRWLock.readLock().lock();
         try {
@@ -101,19 +97,24 @@ public class URLyBirdData extends Data {
             magicCookie = dbFile.readInt();
             // go to the next starting position and repeat
             offset += MAGIC_COOKIE_LENGTH;
-            // for record length
+            // go to dbFile offset location for record length
             dbFile.seek(offset);
-            recordLength = dbFile.readInt();
+            // add the record length read from the file to the deleted field
+            recordLength += dbFile.readInt();
+            // go to the next starting position and repeat
             offset += RECORD_LENGTH_BYTES;
-            // for number of fields in record
+            // go to dbFile offset location for number of fields in record
             dbFile.seek(offset);
+            // read 2 bytes of data and return as a short
             numFields = dbFile.readShort();
+            // go to the next starting position and repeat
             offset += NUM_FIELDS_LENGTH;
             // read schema description
-            // loop for number of fields in a record
+            // create variables to be used inside, outside the loop
             String fieldName;
             int fieldLength;
             short fieldNameLength;
+            // loop for number of fields in a record
             for (int i = 0; i < numFields; i++) {
                 // go to beginning of the column definition
                 dbFile.seek(offset);
@@ -124,7 +125,7 @@ public class URLyBirdData extends Data {
                 // read the column name data from the file in form of byte array
                 byte[] fieldNameData = read(offset, fieldNameLength);
                 // convert the byte array into String using the encoding
-                fieldName = new String(fieldNameData, ENCODING);
+                fieldName = new String(fieldNameData, encoding);
                 // increment offset to starting point of column length data
                 offset += fieldNameLength;
                 // go to the offset location for column length data
@@ -141,6 +142,33 @@ public class URLyBirdData extends Data {
             dbRWLock.readLock().unlock();
         }
         return offset;
+    }
+
+    @Override
+    public String[] readRecord(long recNo) throws RecordNotFoundException {
+        // array of string to represent the record
+        String[] record;
+        // -- TODO -- implement record level locking
+        // prevent database file from being changed while being read
+        dbRWLock.readLock().lock();
+        try {
+            // read all record bytes from the databse file
+            byte[] data = read(recNo, recordLength);
+            if ("1".equals(new String(data, 0, 1))) {
+                throw new RecordNotFoundException("Record deleted");
+            } else {
+                record = parseRecord(data);
+            }
+        } catch (IOException | IndexOutOfBoundsException ex) {
+            log.log(Level.SEVERE, "\nRecord could not be read"
+                    + "\nRecord Number: {0}\nRecord Length: {1}"
+                    + "\nFile Length: {2}",
+                    new Object[]{recNo, recordLength, getDBFileLength()});
+            throw new RecordNotFoundException();
+        } finally {
+            dbRWLock.readLock().unlock();
+        }
+        return record;
     }
 
 }
