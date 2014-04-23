@@ -373,13 +373,13 @@ public class Data implements DBAccess {
         try {
             // field value object to be used
             String fieldValue;
-            // create the recordbuilder object to be used
-            recordBuilder = new StringBuilder(new String(new byte[recordLength]));
+            // create the recordbuilder object to be used less deleted flag byte
+            recordBuilder = new StringBuilder(new String(new byte[recordLength - 1]));
             // for each field name get the number of bytes
             for (int fieldLength : fields.values()) {
                 fieldValue = record[idx];
                 // ensure the field value in record at least the correct length
-                while(fieldValue.length() < fieldLength){
+                while (fieldValue.length() < fieldLength) {
                     // pad end with blank string
                     fieldValue += " ";
                 }
@@ -393,7 +393,7 @@ public class Data implements DBAccess {
                 idx++;
             }
             // if the built record exceeds the specified record length
-            if (recordBuilder.length() > recordLength) {
+            if (recordBuilder.length() >= recordLength) {
                 throw new IndexOutOfBoundsException("Record built is too long");
             } else {
                 // return the build record byte array data
@@ -447,6 +447,7 @@ public class Data implements DBAccess {
                 // overwrite the record ignoring the deleted flag byte
                 writeRecord(recNo, data);
             }
+
         } catch (IOException ex) {
             log.log(Level.SEVERE, "Record update failed.", ex);
         } finally {
@@ -461,14 +462,16 @@ public class Data implements DBAccess {
         // prevent database file from being read/edited while being writen
         dbRWLock.writeLock().lock();
         try {
-            // prepare database file for record deletion
+            // go to record number location to check for status
             dbFile.seek(recNo);
             // if record has already been deleted throw
             if (dbFile.read() == 1) {
-                throw new RecordNotFoundException("Record deleted");
+                throw new RecordNotFoundException("Record already deleted");
             } else {
+                // go to record number location in file to set deleted flag
+                dbFile.seek(recNo);
                 // overwrite the deleted flag byte ignoring the data
-                dbFile.write(0);
+                dbFile.write(1);
             }
         } catch (IOException ex) {
             log.log(Level.SEVERE, "Record update failed.", ex);
@@ -714,7 +717,7 @@ public class Data implements DBAccess {
     public static final String toArrayString(Object[] array) {
         String as = "";
         for (Object o : array) {
-            as += "[" + o.toString() + "](" + o.toString().length() + ")] ";
+            as += "[" + o.toString() + "](" + o.toString().length() + ") ";
         }
         return as;
     }
