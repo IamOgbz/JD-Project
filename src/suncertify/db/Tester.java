@@ -18,19 +18,24 @@ public class Tester {
         log.log(Level.INFO, "Occupancy Record Length: {0}",
                 String.valueOf(Occupancy.RECORD_LENGTH));
         try {
-            Data data = new URLyBirdData(dbPath);
-            log.log(Level.INFO, "magic cookie: {0}", URLyBirdData.magicCookie);
+            Data data = new Data(dbPath);
+            log.log(Level.INFO, "magic cookie: {0}", Data.magicCookie);
             log.log(Level.INFO, "record length: {0}", Data.recordLength);
             log.log(Level.INFO, "num fields: {0}", Data.numFields);
             log.log(Level.INFO, "fields: {0}", data.fields.toString());
             log.log(Level.INFO, "data offset: {0}",
                     String.valueOf(data.dataOffset));
             String table = "";
-            Collection<String[]> records = data.search("", "Palace");
+            Collection<String[]> records = data.search("");
+            long offset = data.dataOffset;
             for (String[] record : records) {
-                table += "\n" + toArrayString(record);
+                offset += Data.recordLength;
+                table += "\n"+ offset + " " + toArrayString(record);
             }
             log.info(table);
+            // test update
+            // test delete
+            // test create
         } catch (IOException ex) {
             log.log(Level.SEVERE, null, ex);
         }
