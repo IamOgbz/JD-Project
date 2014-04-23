@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,11 +21,6 @@ import java.util.logging.Logger;
  * @author Emmanuel
  */
 public class Data implements DBAccess {
-
-    /**
-     * Data file cookie identifier.
-     */
-    public static int magicCookie;
 
     /**
      * The length (in bytes) of the cookie that describes the data file.
@@ -49,6 +46,11 @@ public class Data implements DBAccess {
      * The length (in bytes) of the data that contains each field length.
      */
     public static final short FIELD_LENGTH_BYTES = 2;
+
+    /**
+     * Data file cookie identifier.
+     */
+    public static int magicCookie;
 
     /**
      * The field names and byte length parsed from the file.
@@ -87,6 +89,11 @@ public class Data implements DBAccess {
      */
     protected static final ReentrantReadWriteLock dbRWLock
             = new ReentrantReadWriteLock(true);
+
+    /**
+     * The map used to lock and unlock records
+     */
+    private static final Map<Long, Long> lockCookies = new LinkedHashMap<>();
 
     /**
      * The Logger instance. All log messages from this class are routed through
@@ -267,6 +274,17 @@ public class Data implements DBAccess {
     }
 
     /**
+     * Checks if a record ha been deleted by reading the deleted flag byte.
+     *
+     * @param recNo the offset location in file of the record
+     * @return true is the byte at the deleted flag is 1
+     * @throws IOException
+     */
+    public final boolean isDeleted(long recNo) throws IOException {
+        return read(recNo, 1)[0] == 1;
+    }
+
+    /**
      * Convert byte array data into a record represented by string array of
      * field values, using the schema definition stored in <code>fields</code>.
      *
@@ -308,10 +326,8 @@ public class Data implements DBAccess {
         // prevent database file from being changed while being read
         dbRWLock.readLock().lock();
         try {
-            // go to record location
-            dbFile.seek(recNo);
-            // read the deleted flag byte
-            if (dbFile.read() == 1) {
+            // check the deleted flag byte
+            if (isDeleted(recNo)) {
                 throw new RecordNotFoundException("Record deleted");
             } else {
                 // read all record bytes from the database file
@@ -329,6 +345,102 @@ public class Data implements DBAccess {
             dbRWLock.readLock().unlock();
         }
         return record;
+    }
+
+    /**
+     * Perform matching between the criteria fields and the record fields.
+     * Fields are considered to match if the record field [n] starts with or
+     * equals to the criteria value [n].<br><br><b>Empty strings match anything
+     * and NULL values match nothing</b>
+     *
+     * @param criteria the field values to check the record against
+     * @param record the record to check for matching
+     * @return the number of matches made between the criteria and the record
+     */
+    public static int matchRecord(String[] criteria, String[] record) {
+        int matches = 0;
+        // the length of the smaller array to use for loop
+        int len = Math.min(criteria.length, record.length);
+        for (int i = 0; i < len; i++) {
+            if (criteria[i] != null && record[i].startsWith(criteria[i])) {
+                matches++;
+            }
+        }
+        return matches;
+    }
+
+    @Override
+    public long[] findByCriteria(String[] criteria) {
+        // replace null values with empty string // and vice versa
+        // this is for use in matchRecord and to fulfil the method definition
+        for (int i = 0; i < criteria.length; i++) {
+            if (criteria[i] == null) {
+                criteria[i] = "";
+            }
+            //else if (criteria[i].isEmpty()) {
+            //criteria[i] = null;
+            //}
+        }
+        // prevent data from being read while being changed
+        dbRWLock.writeLock().lock();
+        try {
+            // clear the dataBuffer
+            dataBuffer.clear();
+            // refresh the length of the database file
+            getDBFileLength();
+            // create record variable for the loop
+            String[] record;
+            // loop through the database file and read records at each location
+            for (long offset = dataOffset; offset < dbFileLength; offset += recordLength) {
+                try {
+                    // if record not deleted
+                    if (!isDeleted(offset)) {
+                        // read bytes and get the record at offset 
+                        record = readRecord(offset);
+                        // if there is at least one matc
+                        if (matchRecord(criteria, record) > 0) {
+                            // add the record to the data buffer
+                            dataBuffer.put(offset, record);
+                        }
+                    }
+                } catch (RecordNotFoundException ex) {
+                    log.log(Level.INFO, "Record not found.\nRecord Address: {0}"
+                            + "\n{1}", new Object[]{offset, ex});
+                } catch (IOException ex) {
+                    log.log(Level.SEVERE, "Could not read database file\n", ex);
+                }
+            }
+
+            // retrieve the record numbers from the dataBuffer
+            Object[] recNos = dataBuffer.keySet().toArray();
+            // create the result array
+            long[] result = new long[recNos.length];
+            // loop through and cast the record numbers into the primitive long
+            for (int i = 0; i < recNos.length; i++) {
+                result[i] = (Long) recNos[i];
+            }
+            // return the primitive array of the result
+            return result;
+        } finally {
+            dbRWLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Takes search parameters and returns records that match. The parameters
+     * given should coincide with the arrangement of the fields in each record.
+     *
+     * @param params the search parameters
+     * @return the resulting records from the search
+     */
+    public Collection<String[]> search(String... params) {
+        // to prevent data buffer from being read in the middle of changes
+        synchronized (dataBuffer) {
+            // get the records that match from the data file
+            findByCriteria(params);
+            // return the matching values stored in the data buffer
+            return dataBuffer.values();
+        }
     }
 
     /**
@@ -431,156 +543,9 @@ public class Data implements DBAccess {
         }
     }
 
-    @Override
-    public void updateRecord(long recNo, String[] data, long lockCookie)
-            throws RecordNotFoundException, SecurityException {
-        // -- TODO -- implement record level locking
-        // prevent database file from being read/edited while being writen
-        dbRWLock.writeLock().lock();
-        try {
-            // prepare database file for record overwriting
-            dbFile.seek(recNo);
-            // if record has been deleted throw
-            if (dbFile.read() == 1) {
-                throw new RecordNotFoundException("Record deleted");
-            } else {
-                // overwrite the record ignoring the deleted flag byte
-                writeRecord(recNo, data);
-            }
-
-        } catch (IOException ex) {
-            log.log(Level.SEVERE, "Record update failed.", ex);
-        } finally {
-            dbRWLock.writeLock().unlock();
-        }
-    }
-
-    @Override
-    public void deleteRecord(long recNo, long lockCookie)
-            throws RecordNotFoundException, SecurityException {
-        // -- TODO -- implement record level locking
-        // prevent database file from being read/edited while being writen
-        dbRWLock.writeLock().lock();
-        try {
-            // go to record number location to check for status
-            dbFile.seek(recNo);
-            // if record has already been deleted throw
-            if (dbFile.read() == 1) {
-                throw new RecordNotFoundException("Record already deleted");
-            } else {
-                // go to record number location in file to set deleted flag
-                dbFile.seek(recNo);
-                // overwrite the deleted flag byte ignoring the data
-                dbFile.write(1);
-            }
-        } catch (IOException ex) {
-            log.log(Level.SEVERE, "Record update failed.", ex);
-            throw new RecordNotFoundException();
-        } finally {
-            dbRWLock.writeLock().unlock();
-        }
-    }
-
     /**
-     * Perform matching between the criteria fields and the record fields.
-     * Fields are considered to match if the record field [n] starts with or
-     * equals to the criteria value [n].<br><br><b>Empty strings match anything
-     * and NULL values match nothing</b>
-     *
-     * @param criteria the field values to check the record against
-     * @param record the record to check for matching
-     * @return the number of matches made between the criteria and the record
-     */
-    public static int matchRecord(String[] criteria, String[] record) {
-        int matches = 0;
-        // the length of the smaller array to use for loop
-        int len = Math.min(criteria.length, record.length);
-        for (int i = 0; i < len; i++) {
-            if (criteria[i] != null && record[i].startsWith(criteria[i])) {
-                matches++;
-            }
-        }
-        return matches;
-    }
-
-    @Override
-    public long[] findByCriteria(String[] criteria) {
-        // replace null values with empty string // and vice versa
-        // this is for use in matchRecord and to fulfil the method definition
-        for (int i = 0; i < criteria.length; i++) {
-            if (criteria[i] == null) {
-                criteria[i] = "";
-            }
-            //else if (criteria[i].isEmpty()) {
-            //criteria[i] = null;
-            //}
-        }
-        // prevent data from being read while being changed
-        dbRWLock.writeLock().lock();
-        try {
-            // clear the dataBuffer
-            dataBuffer.clear();
-            // refresh the length of the database file
-            getDBFileLength();
-            // create record variable for the loop
-            String[] record;
-            // loop through the database file and read records at each location
-            for (long offset = dataOffset; offset < dbFileLength; offset += recordLength) {
-                try {
-                    // if record not deleted
-                    dbFile.seek(offset);
-                    if (dbFile.read() == 0) {
-                        // read bytes and get the record at offset 
-                        record = readRecord(offset);
-                        // if there is at least one matc
-                        if (matchRecord(criteria, record) > 0) {
-                            // add the record to the data buffer
-                            dataBuffer.put(offset, record);
-                        }
-                    }
-                } catch (RecordNotFoundException ex) {
-                    log.log(Level.INFO, "Record not found.\nRecord Address: {0}"
-                            + "\n{1}", new Object[]{offset, ex});
-                } catch (IOException ex) {
-                    log.log(Level.SEVERE, "Could not read database file\n", ex);
-                }
-            }
-
-            // retrieve the record numbers from the dataBuffer
-            Object[] recNos = dataBuffer.keySet().toArray();
-            // create the result array
-            long[] result = new long[recNos.length];
-            // loop through and cast the record numbers into the primitive long
-            for (int i = 0; i < recNos.length; i++) {
-                result[i] = (Long) recNos[i];
-            }
-            // return the primitive array of the result
-            return result;
-        } finally {
-            dbRWLock.writeLock().unlock();
-        }
-    }
-
-    /**
-     * Takes search parameters and returns records that match. The parameters
-     * given should coincide with the arrangement of the fields in each record.
-     *
-     * @param params the search parameters
-     * @return the resulting records from the search
-     */
-    public Collection<String[]> search(String... params) {
-        // to prevent data buffer from being read in the middle of changes
-        synchronized (dataBuffer) {
-            // get the records that match from the data file
-            findByCriteria(params);
-            // return the matching values stored in the data buffer
-            return dataBuffer.values();
-        }
-    }
-
-    /**
-     * Checks if two records have the same values and their ordering<br>
-     * Override for a custom comparison of records.
+     * Checks if two records have the same values and their order. <br> Used to
+     * check for duplicate records. Override for a custom comparison of records.
      *
      * @param record1 the first record
      * @param record2 the second record
@@ -626,10 +591,8 @@ public class Data implements DBAccess {
                 if (compareRecords(record, data) == 0) {
                     throw new DuplicateKeyException("Duplicate record found");
                 } else {
-                    // go to the offset location in the database file
-                    dbFile.seek(offset);
                     // check if the record position is first available
-                    if (dbFile.read() == 0 && finalOffset < 0) {
+                    if (isDeleted(offset) && finalOffset < 0) {
                         finalOffset = offset;
                     }
                 }
@@ -664,13 +627,94 @@ public class Data implements DBAccess {
     }
 
     @Override
+    public void updateRecord(long recNo, String[] data, long lockCookie)
+            throws RecordNotFoundException, SecurityException {
+        // record level locking
+        if (lockCookies.get(recNo) == lockCookie) {
+            // prevent database file from being read/edited while being writen
+            // dbRWLock.writeLock().lock();
+            try {
+                // if record has been deleted throw
+                if (isDeleted(recNo)) {
+                    throw new RecordNotFoundException("Record deleted");
+                } else {
+                    // overwrite the record ignoring the deleted flag byte
+                    writeRecord(recNo, data);
+                }
+
+            } catch (IOException ex) {
+                log.log(Level.SEVERE, "Record update failed.", ex);
+            } finally {
+                // dbRWLock.writeLock().unlock();
+            }
+        } else {
+            throw new SecurityException("Invalid lock cookie");
+        }
+    }
+
+    @Override
+    public void deleteRecord(long recNo, long lockCookie)
+            throws RecordNotFoundException, SecurityException {
+        // record level locking
+        if (lockCookies.get(recNo) == lockCookie) {
+            // prevent database file from being read/edited while being writen
+            // dbRWLock.writeLock().lock();
+            try {
+                // if record has already been deleted throw
+                if (isDeleted(recNo)) {
+                    throw new RecordNotFoundException("Record already deleted");
+                } else {
+                    // overwrite the deleted flag byte ignoring the data
+                    write(recNo, new byte[]{1});
+                }
+            } catch (IOException ex) {
+                log.log(Level.SEVERE, "Record update failed.", ex);
+                throw new RecordNotFoundException();
+            } finally {
+                // dbRWLock.writeLock().unlock();
+            }
+        } else {
+            throw new SecurityException("Invalid lock cookie");
+        }
+    }
+
+    @Override
     public long lockRecord(long recNo) throws RecordNotFoundException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        // fpr managine concurrent clients
+        synchronized (lockCookies) {
+            // stay in the loop while the record is locked
+            while (lockCookies.containsKey(recNo)) {
+                try {
+                    log.info("Waiting for lock to be released");
+                    // wait for the next time a record is unlocked
+                    // then check again
+                    lockCookies.wait();
+                } catch (InterruptedException ex) {
+                    log.log(Level.SEVERE, "Locking interrupted", ex);
+                }
+            }
+            // after record has been unlocked
+            log.info("Preparing to lock");
+            // use system nano time as a seed for generating the unique cookie
+            byte[] seed = String.valueOf(System.nanoTime()).getBytes();
+            // generate a secure lock cookie
+            long cookie = new SecureRandom(seed).nextLong();
+            // lock the record with the cookie
+            lockCookies.put(recNo, cookie);
+            return cookie;
+        }
     }
 
     @Override
     public void unlock(long recNo, long cookie) throws SecurityException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        synchronized (lockCookies) {
+            if (lockCookies.get(recNo) == cookie) {
+                lockCookies.remove(recNo);
+                lockCookies.notifyAll();
+            } else {
+                throw new SecurityException("Invalid lock cookie");
+            }
+        }
     }
 
     /**

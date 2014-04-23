@@ -1,7 +1,9 @@
 package suncertify.db;
 
+import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.logging.Logger;
 
 /**
@@ -68,7 +70,6 @@ public class Occupancy {
      * Data Address. Store the offset location in the database file.
      */
     //private long address;
-
     /**
      * Deleted Flag. Store the state of the record.
      */
@@ -107,7 +108,7 @@ public class Occupancy {
      * Date available. The single night to which this record relates, format
      * returned is yyyy/mm/dd.
      */
-    private Calendar date;
+    private Date date;
 
     /**
      * Customer holding this record. The customer id (an 8 digit number). Note:
@@ -128,16 +129,17 @@ public class Occupancy {
      * occupancy.
      *
      * @param fields the values stored in reach record
+     * @throws java.text.ParseException if the date string fails to be parsed
      */
-    public Occupancy(String[] fields) {
-        this.name = name;
-        this.location = location;
-        this.size = size;
-        this.smoking = smoking;
-        this.rate = rate;
-        this.date = date;
-        this.owner = owner;
-        this.deleted = deleted;
+    public Occupancy(String[] fields) throws ParseException {
+        this.name = fields[0];
+        this.location = fields[1];
+        this.size = Integer.parseInt(fields[2]);
+        this.smoking = fields[3].charAt(0);
+        this.rate = fields[4];
+        this.date = DateFormat.getInstance().parse(fields[5]);
+        this.owner = fields[6];
+        this.deleted = fields[7].getBytes()[0];
     }
 
     /**
@@ -153,7 +155,7 @@ public class Occupancy {
      * @param deleted a byte to set the deleted flag
      */
     public Occupancy(String name, String location, short size,
-            char smoking, String rate, Calendar date, String owner, byte deleted) {
+            char smoking, String rate, Date date, String owner, byte deleted) {
         this.name = name;
         this.location = location;
         this.size = size;
@@ -241,8 +243,8 @@ public class Occupancy {
     /**
      * @return the room smoking value
      */
-    public char getSmoking() {
-        return smoking;
+    public String getSmoking() {
+        return String.valueOf(smoking);
     }
 
     /**
@@ -276,7 +278,7 @@ public class Occupancy {
     /**
      * @param date the available date to set.
      */
-    public void setDate(Calendar date) {
+    public void setDate(Date date) {
         this.date = date;
     }
 
@@ -295,14 +297,15 @@ public class Occupancy {
     }
 
     /**
-     * To create a write ready byte array for write operations, each database
-     * field converted into byte arrays of appropriate length and then
-     * concatenated.
+     * To create a string array from the occupancy to be used for writing into
+     * the database file
      *
-     * @return a byte array for write operations
+     * @return a string array representation of the occupancy
      */
-    public byte[] toRecord() {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public String[] toRecord() {
+        String[] record = new String[]{getName(), getLocation(), getSize(), 
+            getSmoking(), getRate(), getDate(), getOwner()};
+        return record;
     }
 
     /**
@@ -314,46 +317,6 @@ public class Occupancy {
                 + ", location=" + location + ", size=" + size
                 + ", smoking=" + isSmoking() + ", rate=" + rate
                 + ", date=" + date + ", owner=" + owner + '}';
-    }
-
-    /**
-     * Return a hashcode for this Occupancy object that should be reasonably
-     * unique amongst records. As with the <code>equals</code> method, we know
-     * that the address will be unique amongst records, so all we need do is
-     * perform some. If the record address did not provide a reasonably unique
-     * value, we might consider generating a more unique hashcode.
-     *
-     * @return the hashcode for this instance of Occupancy
-     */
-    @Override
-    public int hashCode() {
-//        int hash = 3;
-//        hash = 71 * hash + (int) (this.address ^ (this.address >>> 32));
-//        return hash;
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    /**
-     * Checks whether two Occupancy objects are the same by comparing addresses.
-     * Since an address is unique per record, if the two addresses are the same,
-     * the two occupancy records must be the same. If we could not use the
-     * addresses alone to compare two records, we might have to compare more
-     * fields within the two records.
-     *
-     * @param obj the object to compare with this occupancy
-     * @return true if the two occupancy are stored in the same file address
-     */
-    @Override
-    public boolean equals(Object obj) {
-//        if (obj == null) {
-//            return false;
-//        }
-//        if (getClass() != obj.getClass()) {
-//            return false;
-//        }
-//        final Occupancy other = (Occupancy) obj;
-//        return this.address == other.address;
-        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }
