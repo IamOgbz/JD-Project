@@ -48,46 +48,9 @@ public class Data implements DBAccess {
     public static final short FIELD_LENGTH_BYTES = 2;
 
     /**
-     * Data file cookie identifier.
-     */
-    public static int magicCookie;
-
-    /**
-     * The field names and byte length parsed from the file.
-     */
-    public final Map<String, Integer> fields = new LinkedHashMap<>();
-
-    /**
-     * The offset for reading the records from the database file. Set once after
-     * the database file is loaded and parsed.
-     */
-    protected final long dataOffset;
-
-    /**
-     * The number of fields in each record.
-     */
-    protected static int numFields;
-
-    /**
-     * The length (in bytes) of each record.
-     */
-    protected static int recordLength = 0;
-
-    /**
-     * The character encoding used in the URLyBird database file. Default is
-     * "UTF-8".
-     */
-    protected static Charset encoding = StandardCharsets.UTF_8;
-
-    /**
-     * The physical file on disk containing our data.
-     */
-    protected static RandomAccessFile dbFile = null;
-
-    /**
      * The read write lock used to maintain database operations concurrency.
      */
-    protected static final ReentrantReadWriteLock dbRWLock
+    private static final ReentrantReadWriteLock dbRWLock
             = new ReentrantReadWriteLock(true);
 
     /**
@@ -102,25 +65,62 @@ public class Data implements DBAccess {
     private static final Logger log = Logger.getLogger("suncertify.db");
 
     /**
-     * The object used to construct out record to be written to database file.
-     */
-    private static StringBuilder recordBuilder = null;
-
-    /**
-     * The length of the database file. Update after each call to
-     * <code>readData()</code>
-     */
-    private static long dbFileLength = 0L;
-
-    /**
      * The location where the database file is stored.
      */
-    private static String dbPath = null;
+    protected static String dbPath = null;
+
+    /**
+     * The physical file on disk containing our data.
+     */
+    private static RandomAccessFile dbFile = null;
+
+    /**
+     * The field names and byte length parsed from the file.
+     */
+    private final Map<String, Integer> fields;
 
     /**
      * A buffer for the database in between subsequent read operations.
      */
     private final Map<Long, String[]> dataBuffer;
+
+    /**
+     * Data file cookie identifier.
+     */
+    private int magicCookie;
+
+    /**
+     * The offset for reading the records from the database file. Set once after
+     * the database file is loaded and parsed.
+     */
+    private long dataOffset;
+
+    /**
+     * The number of fields in each record.
+     */
+    private int numFields;
+
+    /**
+     * The length (in bytes) of each record.
+     */
+    private int recordLength;
+
+    /**
+     * The character encoding used in the URLyBird database file. Default is
+     * "UTF-8".
+     */
+    protected Charset encoding;
+
+    /**
+     * The length of the database file. Update after each call to
+     * <code>readData()</code>
+     */
+    private long dbFileLength;
+
+    /**
+     * The object used to construct out record to be written to database file.
+     */
+    private StringBuilder recordBuilder;
 
     /**
      * Default constructor that accepts the database path as a parameter.
@@ -150,20 +150,21 @@ public class Data implements DBAccess {
                     new Object[]{dbPath});
             dbFile = new RandomAccessFile(dbPath, "rw");
         }
-        // parse the header and set the data offset to the start of the records
-        dataOffset = readHeader();
+        // instantiate the fields map
+        fields = new LinkedHashMap<>();
         // instantiate the data buffer
         dataBuffer = new LinkedHashMap<>();
+        // parse the header and set the data offset to the start of the records
+        readHeader();
     }
 
     /**
-     * Override this method to perform custom read operations on file load. The
-     * readHeader method should by default start from position 0 in the file.
+     * Performs read operations on database file, on instantiation
      *
      * @return the position to start reading the data
      * @throws java.io.IOException
      */
-    public long readHeader() throws IOException {
+    private void readHeader() throws IOException {
         // the offset storing the read operation cursor
         long offset;
         // set charater encoding used for the data
@@ -224,10 +225,10 @@ public class Data implements DBAccess {
                 // or row data if the loop is over
                 offset += FIELD_LENGTH_BYTES;
             }
+            dataOffset = offset;
         } finally {
             dbRWLock.readLock().unlock();
         }
-        return offset;
     }
 
     /**
@@ -260,7 +261,7 @@ public class Data implements DBAccess {
      * length specified
      * @throws IOException
      */
-    public final byte[] read(long offset, int length) throws IOException {
+    private byte[] read(long offset, int length) throws IOException {
         byte[] data = new byte[length];
         // blocks other users for the ammount of time it takes to read the data
         dbRWLock.readLock().lock();
@@ -280,7 +281,7 @@ public class Data implements DBAccess {
      * @return true is the byte at the deleted flag is 1
      * @throws IOException
      */
-    public final boolean isDeleted(long recNo) throws IOException {
+    private boolean isDeleted(long recNo) throws IOException {
         return read(recNo, 1)[0] == 1;
     }
 
@@ -294,7 +295,7 @@ public class Data implements DBAccess {
      * @throws IndexOutOfBoundsException if the byte array length does not match
      * the record length
      */
-    public final String[] parseRecord(byte[] data)
+    private String[] parseRecord(byte[] data)
             throws IndexOutOfBoundsException {
         if (data.length == recordLength) {
             // index used to store field values in array positions
@@ -451,7 +452,7 @@ public class Data implements DBAccess {
      * @param data the bytes to be written
      * @throws IOException
      */
-    public final void write(long offset, byte[] data) throws IOException {
+    private void write(long offset, byte[] data) throws IOException {
         dbRWLock.writeLock().lock();
         try {
             dbFile.seek(offset);
@@ -475,7 +476,7 @@ public class Data implements DBAccess {
      * the record length or if a field value is longer than the definition
      * specified in the schema fields.
      */
-    public final byte[] prepareRecord(String[] record)
+    private  byte[] prepareRecord(String[] record)
             throws IndexOutOfBoundsException {
         // index used to iterate over field values in record
         short idx = 0;
@@ -525,7 +526,7 @@ public class Data implements DBAccess {
      * @throws IOException when the data to be written is too long for the fixed
      * record length
      */
-    public final void writeRecord(long recNo, String[] data)
+    private void writeRecord(long recNo, String[] data)
             throws IOException {
         // -- TODO -- implement record level locking
         // prevent database file from being read/edited while being writen
@@ -718,10 +719,38 @@ public class Data implements DBAccess {
     }
 
     /**
+     * @return the magicCookie
+     */
+    public int getMagicCookie() {
+        return magicCookie;
+    }
+
+    /**
+     * @return the encoding
+     */
+    public Charset getEncoding() {
+        return encoding;
+    }
+
+    /**
+     * @return  a string representation of the fields
+     */
+    public String getFields() {
+        return fields.toString();
+    }
+
+    /**
      * @return the numFields
      */
     public int getNumFields() {
         return numFields;
+    }
+
+    /**
+     * @return the dataOffset
+     */
+    public long getDataOffset() {
+        return dataOffset;
     }
 
     /**
