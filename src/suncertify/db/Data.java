@@ -322,8 +322,8 @@ public class Data implements DBAccess {
         } catch (IOException | IndexOutOfBoundsException ex) {
             log.log(Level.SEVERE, "Record could not be read"
                     + "\nRecord Number: {0}\nRecord Length: {1}"
-                    + "\nFile Length: {2}",
-                    new Object[]{recNo, recordLength, getDBFileLength()});
+                    + "\nFile Length: {2}\n{3}",
+                    new Object[]{recNo, recordLength, getDBFileLength(), ex});
             throw new RecordNotFoundException();
         } finally {
             dbRWLock.readLock().unlock();
@@ -371,14 +371,22 @@ public class Data implements DBAccess {
         int fieldOffset = 0;
         dbRWLock.writeLock().lock();
         try {
+            // field value object to be used
+            String fieldValue;
             // create the recordbuilder object to be used
             recordBuilder = new StringBuilder(new String(new byte[recordLength]));
             // for each field name get the number of bytes
             for (int fieldLength : fields.values()) {
+                fieldValue = record[idx];
+                // ensure the field value in record at least the correct length
+                while(fieldValue.length() < fieldLength){
+                    // pad end with blank string
+                    fieldValue += " ";
+                }
                 // replace the empty string at the specified field offset with the 
                 // corresponding field value
                 recordBuilder.replace(fieldOffset, fieldOffset + fieldLength,
-                        record[idx]);
+                        fieldValue);
                 // increment to the next field offset
                 fieldOffset += fieldLength;
                 // increment to the next field value
@@ -386,7 +394,7 @@ public class Data implements DBAccess {
             }
             // if the built record exceeds the specified record length
             if (recordBuilder.length() > recordLength) {
-                throw new IndexOutOfBoundsException("Built record longer than record length ");
+                throw new IndexOutOfBoundsException("Record built is too long");
             } else {
                 // return the build record byte array data
                 return recordBuilder.toString().getBytes();
@@ -414,11 +422,9 @@ public class Data implements DBAccess {
             // write into database file, skipping the deleted flag byte
             write(recNo + 1, prepareRecord(data));
         } catch (IndexOutOfBoundsException ex) {
-            log.log(Level.SEVERE, "\nData exceeds record length"
-                    + "\nRecord Length: {0}"
-                    + "\nFields: {1}"
-                    + "\nData: {2}",
-                    new Object[]{recordLength, fields, data});
+            log.log(Level.SEVERE, "Data exceeds record length"
+                    + "\nRecord Length: {0}\nFields: {1}\nData: {2}\n{3}",
+                    new Object[]{recordLength, fields, toArrayString(data), ex});
             throw new IOException();
         } finally {
             dbRWLock.writeLock().unlock();
@@ -443,7 +449,6 @@ public class Data implements DBAccess {
             }
         } catch (IOException ex) {
             log.log(Level.SEVERE, "Record update failed.", ex);
-            throw new RecordNotFoundException();
         } finally {
             dbRWLock.writeLock().unlock();
         }
@@ -534,7 +539,7 @@ public class Data implements DBAccess {
                     log.log(Level.INFO, "Record not found.\nRecord Address: {0}"
                             + "\n{1}", new Object[]{offset, ex});
                 } catch (IOException ex) {
-                    log.log(Level.SEVERE, "Could not read database file", ex);
+                    log.log(Level.SEVERE, "Could not read database file\n", ex);
                 }
             }
 
@@ -632,9 +637,9 @@ public class Data implements DBAccess {
                 finalOffset = offset;
             }
         } catch (RecordNotFoundException ex) {
-            log.log(Level.WARNING, "Offset: " + finalOffset, ex);
+            log.log(Level.WARNING, "Offset: {0}\n{1}", new Object[]{finalOffset, ex});
         } catch (IOException ex) {
-            log.log(Level.SEVERE, "Could not read database file", ex);
+            log.log(Level.SEVERE, "Could not read database file\n", ex);
         } finally {
             dbRWLock.readLock().unlock();
         }
@@ -698,6 +703,20 @@ public class Data implements DBAccess {
             log.log(Level.SEVERE, "Could not read database file", ex);
         }
         return dbFileLength;
+    }
+
+    /**
+     * Take an array and returns a string formatted for printing.
+     *
+     * @param array the array to convert
+     * @return a string representation of the array
+     */
+    public static final String toArrayString(Object[] array) {
+        String as = "";
+        for (Object o : array) {
+            as += "[" + o.toString() + "](" + o.toString().length() + ")] ";
+        }
+        return as;
     }
 
 }
