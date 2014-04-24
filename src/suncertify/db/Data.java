@@ -372,15 +372,14 @@ public class Data implements DBAccess {
 
     @Override
     public long[] findByCriteria(String[] criteria) {
-        // replace null values with empty string // and vice versa
-        // this is for use in matchRecord and to fulfil the method definition
+        // replace null values with empty string and vice versa, since
+        // findByCritetia definition is the reverse of matchRecord deinition
         for (int i = 0; i < criteria.length; i++) {
             if (criteria[i] == null) {
                 criteria[i] = "";
+            } else if (criteria[i].isEmpty()) {
+                criteria[i] = null;
             }
-            //else if (criteria[i].isEmpty()) {
-            //criteria[i] = null;
-            //}
         }
         // prevent data from being read while being changed
         dbRWLock.writeLock().lock();
@@ -476,7 +475,7 @@ public class Data implements DBAccess {
      * the record length or if a field value is longer than the definition
      * specified in the schema fields.
      */
-    private  byte[] prepareRecord(String[] record)
+    private byte[] prepareRecord(String[] record)
             throws IndexOutOfBoundsException {
         // index used to iterate over field values in record
         short idx = 0;
@@ -579,7 +578,7 @@ public class Data implements DBAccess {
     public long createRecord(String[] data) throws DuplicateKeyException {
         // instantiate the final offset to a non usable value
         long finalOffset = -1;
-        // lock to prevent code that writes from database file
+        // lock to prevent code that writes to database file
         dbRWLock.readLock().lock();
         try {
             // instantiate variable at start of records in database file
@@ -658,8 +657,8 @@ public class Data implements DBAccess {
             throws RecordNotFoundException, SecurityException {
         // record level locking
         if (lockCookies.get(recNo) == lockCookie) {
-            // prevent database file from being read/edited while being writen
-            // dbRWLock.writeLock().lock();
+            // prevent database file from being read/edited while being written
+            dbRWLock.writeLock().lock();
             try {
                 // if record has already been deleted throw
                 if (isDeleted(recNo)) {
@@ -672,7 +671,7 @@ public class Data implements DBAccess {
                 log.log(Level.SEVERE, "Record update failed.", ex);
                 throw new RecordNotFoundException();
             } finally {
-                // dbRWLock.writeLock().unlock();
+                dbRWLock.writeLock().unlock();
             }
         } else {
             throw new SecurityException("Invalid lock cookie");
@@ -702,6 +701,8 @@ public class Data implements DBAccess {
             long cookie = new SecureRandom(seed).nextLong();
             // lock the record with the cookie
             lockCookies.put(recNo, cookie);
+            log.log(Level.INFO, "Locked\nRecord: {0}\nCookie: {1}",
+                    new Object[]{recNo, cookie});
             return cookie;
         }
     }
@@ -733,7 +734,7 @@ public class Data implements DBAccess {
     }
 
     /**
-     * @return  a string representation of the fields
+     * @return a string representation of the fields
      */
     public String getFields() {
         return fields.toString();
