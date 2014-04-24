@@ -173,7 +173,7 @@ public class Data implements DBAccess {
         //fields.put("deleted", 1);
         // the length of the deleted field
         recordLength = 1;
-        // prevent write operations from happening while reading
+        // prevents code that changes database while block executes
         dbRWLock.readLock().lock();
         try {
             // starting location of the header
@@ -239,16 +239,10 @@ public class Data implements DBAccess {
      * @throws IOException
      */
     public Collection<String[]> readData() throws IOException {
-        // to prevent data buffer from being read in the middle of changes
-        dbRWLock.writeLock().lock();
-        try {
-            // retrieve all the data in the database
-            search("");
-            // return just the records from the data buffer
-            return dataBuffer.values();
-        } finally {
-            dbRWLock.writeLock().unlock();
-        }
+        // retrieve all the data in the database
+        search("");
+        // return just the records from the data buffer
+        return dataBuffer.values();
     }
 
     /**
@@ -263,7 +257,7 @@ public class Data implements DBAccess {
      */
     private byte[] read(long offset, int length) throws IOException {
         byte[] data = new byte[length];
-        // blocks other users for the ammount of time it takes to read the data
+        // prevents code that changes database while block executes
         dbRWLock.readLock().lock();
         try {
             dbFile.seek(offset);
@@ -323,13 +317,13 @@ public class Data implements DBAccess {
     public String[] readRecord(long recNo) throws RecordNotFoundException {
         // array of string to represent the record
         String[] record;
-        // -- TODO -- implement record level locking
-        // prevent database file from being changed while being read
+        // prevents code that changes database while block executes
         dbRWLock.readLock().lock();
         try {
-            // check the deleted flag byte
-            if (isDeleted(recNo)) {
+            if (isDeleted(recNo)) { // check the deleted flag byte
                 throw new RecordNotFoundException("Record deleted");
+            } else if (isLocked(recNo)) { // check if record is locked
+                throw new RecordNotFoundException("Record locked");
             } else {
                 // read all record bytes from the database file
                 byte[] data = read(recNo, recordLength);
@@ -381,48 +375,54 @@ public class Data implements DBAccess {
                 criteria[i] = null;
             }
         }
-        // prevent data from being read while being changed
-        dbRWLock.writeLock().lock();
+        // prevents code that changes database while searching
+        dbRWLock.readLock().lock();
         try {
-            // clear the dataBuffer
-            dataBuffer.clear();
-            // refresh the length of the database file
-            getDBFileLength();
-            // create record variable for the loop
-            String[] record;
-            // loop through the database file and read records at each location
-            for (long offset = dataOffset; offset < dbFileLength; offset += recordLength) {
-                try {
-                    // if record not deleted
-                    if (!isDeleted(offset)) {
-                        // read bytes and get the record at offset 
-                        record = readRecord(offset);
-                        // if there is at least one matc
-                        if (matchRecord(criteria, record) > 0) {
-                            // add the record to the data buffer
-                            dataBuffer.put(offset, record);
+            Object[] recNos;
+            // prevent the dataBuffer from being used while block executes
+            synchronized (dataBuffer) {
+                // clear the dataBuffer
+                dataBuffer.clear();
+                // refresh the length of the database file
+                getDBFileLength();
+                // create record variable for the loop
+                String[] record;
+                // loop through database file and read records at each location
+                for (long offset = dataOffset; offset < dbFileLength;
+                        offset += recordLength) {
+                    try {
+                        // if record not deleted
+                        if (!isDeleted(offset)) {
+                            // read bytes and get the record at offset 
+                            record = readRecord(offset);
+                            // if there is at least one matc
+                            if (matchRecord(criteria, record) > 0) {
+                                // add the record to the data buffer
+                                dataBuffer.put(offset, record);
+                            }
                         }
+                    } catch (RecordNotFoundException ex) {
+                        log.log(Level.INFO, "Record not found."
+                                + "\nRecord Address: {0}\n{1}",
+                                new Object[]{offset, ex});
+                    } catch (IOException ex) {
+                        log.log(Level.SEVERE, "Could not read database file\n",
+                                ex);
                     }
-                } catch (RecordNotFoundException ex) {
-                    log.log(Level.INFO, "Record not found.\nRecord Address: {0}"
-                            + "\n{1}", new Object[]{offset, ex});
-                } catch (IOException ex) {
-                    log.log(Level.SEVERE, "Could not read database file\n", ex);
                 }
+                // retrieve the record numbers from the dataBuffer
+                recNos = dataBuffer.keySet().toArray();
             }
-
-            // retrieve the record numbers from the dataBuffer
-            Object[] recNos = dataBuffer.keySet().toArray();
             // create the result array
             long[] result = new long[recNos.length];
-            // loop through and cast the record numbers into the primitive long
+            // loop through and cast record numbers into the primitive long
             for (int i = 0; i < recNos.length; i++) {
                 result[i] = (Long) recNos[i];
             }
             // return the primitive array of the result
             return result;
         } finally {
-            dbRWLock.writeLock().unlock();
+            dbRWLock.readLock().unlock();
         }
     }
 
@@ -452,6 +452,7 @@ public class Data implements DBAccess {
      * @throws IOException
      */
     private void write(long offset, byte[] data) throws IOException {
+        // prevents code that reads/changes database while block executes
         dbRWLock.writeLock().lock();
         try {
             dbFile.seek(offset);
@@ -578,7 +579,7 @@ public class Data implements DBAccess {
     public long createRecord(String[] data) throws DuplicateKeyException {
         // instantiate the final offset to a non usable value
         long finalOffset = -1;
-        // lock to prevent code that writes to database file
+        // prevents code that changes database while block executes
         dbRWLock.readLock().lock();
         try {
             // instantiate variable at start of records in database file
@@ -610,7 +611,7 @@ public class Data implements DBAccess {
             dbRWLock.readLock().unlock();
         }
 
-        // lock to prevent code that reads from database file
+        // prevent code that reads/changes database while block executes
         dbRWLock.writeLock().lock();
         try {
             // set deleted byte to false "0"
@@ -631,8 +632,8 @@ public class Data implements DBAccess {
             throws RecordNotFoundException, SecurityException {
         // record level locking
         if (lockCookies.get(recNo) == lockCookie) {
-            // prevent database file from being read/edited while being writen
-            // dbRWLock.writeLock().lock();
+            // prevents code that reads/changes database while block executes
+            dbRWLock.writeLock().lock();
             try {
                 // if record has been deleted throw
                 if (isDeleted(recNo)) {
@@ -645,7 +646,7 @@ public class Data implements DBAccess {
             } catch (IOException ex) {
                 log.log(Level.SEVERE, "Record update failed.", ex);
             } finally {
-                // dbRWLock.writeLock().unlock();
+                dbRWLock.writeLock().unlock();
             }
         } else {
             throw new SecurityException("Invalid lock cookie");
@@ -657,7 +658,7 @@ public class Data implements DBAccess {
             throws RecordNotFoundException, SecurityException {
         // record level locking
         if (lockCookies.get(recNo) == lockCookie) {
-            // prevent database file from being read/edited while being written
+            // prevents code that reads/changes database while block executes
             dbRWLock.writeLock().lock();
             try {
                 // if record has already been deleted throw
@@ -678,32 +679,43 @@ public class Data implements DBAccess {
         }
     }
 
+    public final boolean isLocked(long recNo) {
+        return lockCookies.containsKey(recNo);
+    }
+
     @Override
     public long lockRecord(long recNo) throws RecordNotFoundException {
-        // fpr managine concurrent clients
-        synchronized (lockCookies) {
-            // stay in the loop while the record is locked
-            while (lockCookies.containsKey(recNo)) {
-                try {
-                    log.info("Waiting for lock to be released");
-                    // wait for the next time a record is unlocked
-                    // then check again
-                    lockCookies.wait();
-                } catch (InterruptedException ex) {
-                    log.log(Level.SEVERE, "Locking interrupted", ex);
+        // this is to prevent any record from being locked 
+        // while read/write operations are being performed
+        dbRWLock.writeLock().lock();
+        try {
+            // for managing concurrent lock requests
+            synchronized (lockCookies) {
+                // stay in the loop while the record is locked
+                while (isLocked(recNo)) {
+                    try {
+                        log.info("Waiting for lock to be released");
+                        // wait for the next time a record is unlocked
+                        // then check again
+                        lockCookies.wait();
+                    } catch (InterruptedException ex) {
+                        log.log(Level.SEVERE, "Locking interrupted", ex);
+                    }
                 }
+                // after record has been unlocked
+                log.info("Preparing to lock");
+                // use system nano time as a seed for generating the unique cookie
+                byte[] seed = String.valueOf(System.nanoTime()).getBytes();
+                // generate a secure lock cookie
+                long cookie = new SecureRandom(seed).nextLong();
+                // lock the record with the cookie
+                lockCookies.put(recNo, cookie);
+                log.log(Level.INFO, "Locked\nRecord: {0}\nCookie: {1}",
+                        new Object[]{recNo, cookie});
+                return cookie;
             }
-            // after record has been unlocked
-            log.info("Preparing to lock");
-            // use system nano time as a seed for generating the unique cookie
-            byte[] seed = String.valueOf(System.nanoTime()).getBytes();
-            // generate a secure lock cookie
-            long cookie = new SecureRandom(seed).nextLong();
-            // lock the record with the cookie
-            lockCookies.put(recNo, cookie);
-            log.log(Level.INFO, "Locked\nRecord: {0}\nCookie: {1}",
-                    new Object[]{recNo, cookie});
-            return cookie;
+        } finally {
+            dbRWLock.writeLock().unlock();
         }
     }
 

@@ -14,8 +14,8 @@ public interface DBAccess {
      *
      * @param recNo the location of the record in the db file.
      * @return array of string where element is a record value.
-     * @throws RecordNotFoundException if valid record is not found at location
-     * or has been deleted.
+     * @throws RecordNotFoundException if valid record is not found at location,
+     * has been deleted or is currently locked by the lock method
      */
     public String[] readRecord(long recNo)
             throws RecordNotFoundException;
