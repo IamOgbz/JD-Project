@@ -685,26 +685,27 @@ public class Data implements DBAccess {
 
     @Override
     public long lockRecord(long recNo) throws RecordNotFoundException {
-        // this is to prevent any record from being locked 
-        // while read/write operations are being performed
-        dbRWLock.writeLock().lock();
-        try {
-            // for managing concurrent lock requests
-            synchronized (lockCookies) {
-                // stay in the loop while the record is locked
-                while (isLocked(recNo)) {
-                    try {
-                        log.info("Waiting for lock to be released");
-                        // wait for the next time a record is unlocked
-                        // then check again
-                        lockCookies.wait();
-                    } catch (InterruptedException ex) {
-                        log.log(Level.SEVERE, "Locking interrupted", ex);
-                    }
+        // for managing concurrent lock requests
+        synchronized (lockCookies) {
+            // stay in the loop while the record is locked
+            while (isLocked(recNo)) {
+                try {
+                    log.info("Waiting for record lock to be released");
+                    // wait for the next time a record is unlocked
+                    // then check again
+                    lockCookies.wait();
+                } catch (InterruptedException ex) {
+                    log.log(Level.SEVERE, "Waiting interrupted", ex);
                 }
+            }
+            // this is to prevent any record from being locked 
+            // while read/write operations are being performed
+            log.info("Trying to acquire write lock");
+            dbRWLock.writeLock().lock();
+            try {
                 // after record has been unlocked
                 log.info("Preparing to lock");
-                // use system nano time as a seed for generating the unique cookie
+                // use system nano time as seed to generate unique cookie
                 byte[] seed = String.valueOf(System.nanoTime()).getBytes();
                 // generate a secure lock cookie
                 long cookie = new SecureRandom(seed).nextLong();
@@ -713,9 +714,9 @@ public class Data implements DBAccess {
                 log.log(Level.INFO, "Locked\nRecord: {0}\nCookie: {1}",
                         new Object[]{recNo, cookie});
                 return cookie;
+            } finally {
+                dbRWLock.writeLock().unlock();
             }
-        } finally {
-            dbRWLock.writeLock().unlock();
         }
     }
 
