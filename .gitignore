@@ -2,8 +2,9 @@
 ## NetBeans
 #################
 
-build/
-dist/
+.build/
+.dist/
+*.class
 
 #################
 ## Eclipse
