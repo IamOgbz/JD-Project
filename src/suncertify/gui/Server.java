@@ -47,8 +47,10 @@ public class Server extends JFrame {
     private final JPanel ctrlPanel;
     private final JButton startStopButton;
     private final JButton exitButton;
-    // server start stop status
+    // server status
+    private int port;
     private boolean running;
+    private String location;
 
     /**
      * Instantiates the Server GUI and handles initial configurations.
@@ -128,8 +130,6 @@ public class Server extends JFrame {
         public void actionPerformed(ActionEvent ae) {
             // start server
             synchronized (startStopButton) {
-                String location = configPanel.getLocationFieldText();
-                int port = Integer.parseInt(configPanel.getPortNumberText());
                 if (running) {
                     try {
                         startStopButton.setEnabled(false);
@@ -157,7 +157,13 @@ public class Server extends JFrame {
                         }
                         startStopButton.setEnabled(true);
                     }
+                } else if (configPanel.getLocationFieldText().isEmpty()) {
+                    Application.handleException("Location not given.", null);
+                } else if (configPanel.getPortNumberText().isEmpty()) {
+                    Application.handleException("Port number not given.", null);
                 } else {
+                    location = configPanel.getLocationFieldText();
+                    port = Integer.parseInt(configPanel.getPortNumberText());
                     try {
                         startStopButton.setEnabled(false);
                         configPanel.setAllFieldsEnabled(false);

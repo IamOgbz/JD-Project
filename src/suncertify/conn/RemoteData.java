@@ -1,14 +1,12 @@
 package suncertify.conn;
 
 import java.io.IOException;
-import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Collection;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import suncertify.db.Occupancy;
-import suncertify.db.URLyBirdDBAccess;
-import suncertify.db.URLyBirdData;
+import suncertify.db.DBAccess;
+import suncertify.db.Data;
+import suncertify.db.DuplicateKeyException;
+import suncertify.db.RecordNotFoundException;
 
 /**
  * Used to interface between the client and the data layer
@@ -20,7 +18,7 @@ public class RemoteData extends UnicastRemoteObject implements RemoteDBAccess {
     /**
      * the object that accesses out database
      */
-    private final URLyBirdDBAccess db;
+    private final DBAccess db;
 
     /**
      * The Logger instance. All log messages from this class are routed through
@@ -32,29 +30,45 @@ public class RemoteData extends UnicastRemoteObject implements RemoteDBAccess {
      * Instantiates a remote object to be used for invoking the server remotely.
      *
      * @param databasePath the database location.
-     * @throws RemoteException
+     * @throws IOException
      */
-    public RemoteData(String databasePath) throws RemoteException {
-        try {
-            this.db = new URLyBirdData(databasePath);
-        } catch (IOException ex) {
-            throw new RemoteException("Unable to access database file");
-        }
+    public RemoteData(String databasePath) throws IOException {
+            this.db = new Data(databasePath);
     }
 
     @Override
-    public Occupancy getOccupancy(long address) {
-        return db.getOccupancy(address);
+    public String[] readRecord(long recNo) throws RecordNotFoundException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Collection<Occupancy> getOccupancies() {
-        return db.getOccupancies();
+    public void updateRecord(long recNo, String[] data, long lockCookie) throws RecordNotFoundException, SecurityException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Collection<Occupancy> searchOccupancies(String... params) {
-        return db.searchOccupancies(params);
+    public void deleteRecord(long recNo, long lockCookie) throws RecordNotFoundException, SecurityException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public long[] findByCriteria(String[] criteria) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public long createRecord(String[] data) throws DuplicateKeyException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public long lockRecord(long recNo) throws RecordNotFoundException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void unlock(long recNo, long cookie) throws SecurityException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
 }

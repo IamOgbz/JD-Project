@@ -1,4 +1,4 @@
-package suncertify.db;
+package suncertify.gui;
 
 import java.text.DateFormat;
 import java.text.ParseException;

@@ -4,6 +4,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
+import static javax.swing.JOptionPane.ERROR_MESSAGE;
+import static javax.swing.JOptionPane.INFORMATION_MESSAGE;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -71,8 +73,10 @@ public class Application {
      */
     public static void handleException(String msg, Exception ex) {
         log.log(Level.WARNING, msg, ex);
-        JDialog alertDialog = new JOptionPane(msg, JOptionPane.ERROR_MESSAGE,
-                JOptionPane.DEFAULT_OPTION).createDialog("Alert");
+        String title = ex == null ? "Alert" : "Error";
+        int type = ex == null ? INFORMATION_MESSAGE : ERROR_MESSAGE;
+        JDialog alertDialog = new JOptionPane(msg, type,
+                JOptionPane.DEFAULT_OPTION).createDialog(title);
         alertDialog.setVisible(true);
     }
 

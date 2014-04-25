@@ -10,8 +10,6 @@ import java.rmi.registry.Registry;
 import java.rmi.server.RemoteObject;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import suncertify.db.URLyBirdDBAccess;
-import suncertify.db.URLyBirdData;
 
 /**
  * Class to handle local and network functionalities.
@@ -23,7 +21,7 @@ public class DBConnection {
     /**
      * The name of the remote binding.
      */
-    public static final String REMOTE_NAME = "URLyBirdDBAccess";
+    public static final String REMOTE_NAME = "URLyBird";
 
     /**
      * The Logger instance. All log messages from this class are routed through
@@ -45,8 +43,8 @@ public class DBConnection {
      * @return DBAccess implementation for local use.
      * @throws IOException
      */
-    public static URLyBirdDBAccess getLocal(String dbLocation) throws IOException {
-        return new URLyBirdData(dbLocation);
+    public static URLyBirdRemote getLocal(String dbLocation) throws IOException {
+        return new URLyBird(dbLocation);
     }
 
     /**
@@ -57,11 +55,11 @@ public class DBConnection {
      * @return RemoteDBAccess for accessing the database remotely
      * @throws RemoteException
      */
-    public static URLyBirdDBAccess getRemote(String hostname, String port)
+    public static URLyBirdRemote getRemote(String hostname, String port)
             throws RemoteException {
         String url = "rmi://" + hostname + ":" + port + "/" + REMOTE_NAME;
         try {
-            return (URLyBirdDBAccess) Naming.lookup(url);
+            return (URLyBirdRemote) Naming.lookup(url);
         } catch (NotBoundException nbe) {
             log.log(Level.SEVERE, "{0} not registered: {1}",
                     new Object[]{nbe, REMOTE_NAME});
@@ -86,7 +84,7 @@ public class DBConnection {
             throws RemoteException, IllegalArgumentException {
         if (port >= 0 && port <= Integer.parseInt("FFFF", 16)) {
             Registry r = LocateRegistry.createRegistry(port);
-            RemoteObject rob = new RemoteData(dbLocation);
+            URLyBirdRemote rob = new URLyBird(dbLocation);
             r.rebind(REMOTE_NAME, rob);
         } else {
             throw new IllegalArgumentException(
