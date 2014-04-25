@@ -175,55 +175,39 @@ public class Data implements DBAccess {
         encoding = StandardCharsets.US_ASCII;
         // the deleted flag
         recordOffset = 1;
-        // add offset to the fields
         //fields.put("deleted", recordOffset);
-        // start calculating from the length of the offset
         recordLength = recordOffset;
-        // prevents code that changes database while block executes
+
         dbRWLock.readLock().lock();
         try {
-            // go to the offset location in the database file
             dbFile.seek(offset);
-            // reads 4 bytes from the file in the form of int
             magicCookie = dbFile.readInt();
-            // go to the next starting position and repeat
             offset += MAGIC_COOKIE_LENGTH;
-            // go to dbFile offset location for record length
+
             dbFile.seek(offset);
-            // add the record length read from the file to the deleted field
             recordLength += dbFile.readInt();
-            // go to the next starting position and repeat
             offset += RECORD_LENGTH_BYTES;
-            // go to dbFile offset location for number of fields in record
+
             dbFile.seek(offset);
-            // read 2 bytes of data and return as a short
             numFields = dbFile.readShort();
-            // go to the next starting position and repeat
             offset += NUM_FIELDS_LENGTH;
+
             // read schema description
             // create variables to be used inside, outside the loop
             String fieldName;
             int fieldLength;
             short fieldNameLength;
-            // loop for number of fields in a record
             for (int i = 0; i < numFields; i++) {
-                // go to beginning of the column definition
                 dbFile.seek(offset);
-                // get the number of bytes used to store the column name
                 fieldNameLength = dbFile.readShort();
-                // increment offset to starting point of column name
                 offset += FIELD_NAME_LENGTH;
-                // read the column name data from the file in form of byte array
+
                 byte[] fieldNameData = read(offset, fieldNameLength);
-                // convert the byte array into String using the encoding
                 fieldName = new String(fieldNameData, encoding);
-                // increment offset to starting point of column length data
                 offset += fieldNameLength;
-                // go to the offset location for column length data
+
                 dbFile.seek(offset);
-                // read column length
                 fieldLength = dbFile.readShort();
-                // add the column definition to fields
                 fields.put(fieldName, fieldLength);
                 // increment offset to starting point of next column definition 
                 // or row data if the loop is over
@@ -247,7 +231,7 @@ public class Data implements DBAccess {
      */
     private byte[] read(long offset, int length) throws IOException {
         byte[] data = new byte[length];
-        // prevents code that changes database while block executes
+
         dbRWLock.readLock().lock();
         try {
             dbFile.seek(offset);
@@ -287,7 +271,7 @@ public class Data implements DBAccess {
             // index used to get fields from data bytes
             // skip the record offset
             int fieldOffset = recordOffset;
-            // array of string to represent the record
+
             String[] record = new String[numFields];
             // for each field name get the number of bytes
             for (int fieldLength : fields.values()) {
@@ -298,26 +282,22 @@ public class Data implements DBAccess {
             return record;
         } else {
             log.info("Data to parse not equal to record length");
-            // byte array length does not match record length
             throw new IndexOutOfBoundsException();
         }
     }
 
     @Override
     public String[] readRecord(long recNo) throws RecordNotFoundException {
-        // array of string to represent the record
         String[] record;
-        // prevents code that changes database while block executes
+
         dbRWLock.readLock().lock();
         try {
-            if (isDeleted(recNo)) { // check the deleted flag byte
+            if (isDeleted(recNo)) {
                 throw new RecordNotFoundException("Record deleted");
-            } else if (isLocked(recNo)) { // check if record is locked
+            } else if (isLocked(recNo)) {
                 throw new RecordNotFoundException("Record locked");
             } else {
-                // read all record bytes from the database file
                 byte[] data = read(recNo, recordLength);
-                // parse bytes read into record
                 record = parseRecord(data);
             }
         } catch (IOException | IndexOutOfBoundsException ex) {
@@ -344,8 +324,8 @@ public class Data implements DBAccess {
      */
     public static int matchRecord(String[] criteria, String[] record) {
         int matches = 0;
-        // the length of the smaller array to use for loop
         int len = Math.min(criteria.length, record.length);
+
         for (int i = 0; i < len; i++) {
             if (criteria[i] != null && record[i].startsWith(criteria[i])) {
                 matches++;
@@ -365,27 +345,25 @@ public class Data implements DBAccess {
                 criteria[i] = null;
             }
         }
+
         Object[] recNos;
         // prevent the dataBuffer from being used while block executes
         synchronized (dataBuffer) {
-            // clear the dataBuffer to save new set of records
             dataBuffer.clear();
-            // create record variable for the loop
+
             String[] record;
-            // prevents code that changes database while searching
+
             dbRWLock.readLock().lock();
             try {
                 // refresh the length of the database file
                 getDBFileLength();
-                // loop through database file and read records at each location
+
                 for (long offset = dataOffset; offset < dbFileLength;
                         offset += recordLength) {
                     try {
-                        // if record not deleted
                         if (!isDeleted(offset)) {
-                            // read bytes and get the record at offset 
                             record = readRecord(offset);
-                            // if there is at least one matc
+                            // if there is at least one match
                             if (matchRecord(criteria, record) > 0) {
                                 // add the record to the data buffer
                                 dataBuffer.put(offset, record);
@@ -570,28 +548,27 @@ public class Data implements DBAccess {
 
     @Override
     public long createRecord(String[] data) throws DuplicateKeyException {
-        // instantiate the final offset to a non usable value
-        long finalOffset = -1;
-        // instantiate variable at start of records in database file
+        long finalOffset = -1; // instantiate to a non usable value
         long offset = dataOffset;
+
         // prevents code that changes database while block executes
         dbRWLock.readLock().lock();
         try {
             getDBFileLength();
-            // loop through database checking for duplicates and first free space
+
             while (offset < dbFileLength) {
-                // read record in position
+
                 String[] record = readRecord(offset);
-                // check if it is a duplicate record against all records
+
                 if (compareRecords(record, data) == 0) {
                     throw new DuplicateKeyException("Duplicate record found");
                 } else {
-                    // check if the record position is first available
+                    // check if the record num is first available free space
                     if (isDeleted(offset) && finalOffset < 0) {
                         finalOffset = offset;
                     }
                 }
-                // go to next record position
+
                 offset += recordLength;
             }
         } catch (RecordNotFoundException ex) {
@@ -602,6 +579,7 @@ public class Data implements DBAccess {
         } finally {
             dbRWLock.readLock().unlock();
         }
+        // if there was a free space
         if (finalOffset < 0) {
             finalOffset = offset;
         }
@@ -609,16 +587,13 @@ public class Data implements DBAccess {
         // prevent code that reads/changes database while block executes
         dbRWLock.writeLock().lock();
         try {
-            // set deleted byte to false "0"
-            write(finalOffset, "0".getBytes());
-            // write record at free location
+            write(finalOffset, "0".getBytes()); // set deleted byte to false "0"
             writeRecord(finalOffset, data);
         } catch (IOException ex) {
             log.log(Level.SEVERE, "Could not read database file", ex);
         } finally {
             dbRWLock.writeLock().unlock();
         }
-        // return location where record was written
         return finalOffset;
     }
 
@@ -630,7 +605,6 @@ public class Data implements DBAccess {
             // prevents code that reads/changes database while block executes
             dbRWLock.writeLock().lock();
             try {
-                // if record has been deleted throw
                 if (isDeleted(recNo)) {
                     throw new RecordNotFoundException("Record deleted");
                 } else {
@@ -656,7 +630,6 @@ public class Data implements DBAccess {
             // prevents code that reads/changes database while block executes
             dbRWLock.writeLock().lock();
             try {
-                // if record has already been deleted throw
                 if (isDeleted(recNo)) {
                     throw new RecordNotFoundException("Record already deleted");
                 } else {
@@ -705,7 +678,6 @@ public class Data implements DBAccess {
             log.info("Trying to acquire write lock");
             dbRWLock.writeLock().lock();
             try {
-                // after record has been unlocked
                 log.info("Preparing to lock");
                 // use system nano time as seed to generate unique cookie
                 byte[] seed = String.valueOf(System.nanoTime()).getBytes();

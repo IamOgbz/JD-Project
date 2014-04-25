@@ -255,7 +255,7 @@ public class ConfigPanel extends JPanel {
             chooser.addChoosableFileFilter(
                     new FileFilter() {
                         /**
-                         * display files ending in ".db" or any other object
+                         * Display files ending in ".db" or any other object
                          * (directory or other selectable device).
                          */
                         @Override
@@ -269,7 +269,7 @@ public class ConfigPanel extends JPanel {
                         }
 
                         /**
-                         * provide a description for the types of files we are
+                         * Provide a description for the types of files we are
                          * allowing to be selected.
                          */
                         @Override
@@ -279,7 +279,7 @@ public class ConfigPanel extends JPanel {
                     }
             );
 
-            // if the user selected a file, update the file name on screen
+            // if the user selected a file, update the location on screen
             if (JFileChooser.APPROVE_OPTION == chooser.showOpenDialog(null)) {
                 if (cfgPanel != null) {
                     String dbLocation = chooser.getSelectedFile().toString();
