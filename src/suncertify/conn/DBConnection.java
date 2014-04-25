@@ -8,6 +8,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteObject;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -86,25 +87,6 @@ public class DBConnection {
             Registry r = LocateRegistry.createRegistry(port);
             URLyBirdRemote rob = new URLyBird(dbLocation);
             r.rebind(REMOTE_NAME, rob);
-        } else {
-            throw new IllegalArgumentException(
-                    " port number out of range (0..65535)");
-        }
-    }
-
-    /**
-     * Unbind the remote access object.
-     *
-     * @param port the port to unbind
-     * @throws RemoteException
-     * @throws IllegalArgumentException
-     * @throws NotBoundException
-     */
-    public static void unregister(int port)
-            throws RemoteException, IllegalArgumentException, NotBoundException {
-        if (port >= 0 && port <= Integer.parseInt("FFFF", 16)) {
-            Registry r = LocateRegistry.getRegistry(port);
-            r.unbind(REMOTE_NAME);
         } else {
             throw new IllegalArgumentException(
                     " port number out of range (0..65535)");

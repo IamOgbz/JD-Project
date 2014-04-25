@@ -28,9 +28,7 @@ public class Server extends JFrame {
     private static final String START_BUTTON_TEXT = "Start Server";
     private static final String START_BUTTON_TOOLTIP
             = "Enter server configuration then click to start server";
-    private static final String STOP_BUTTON_TEXT = "Stop Server";
-    private static final String STOP_BUTTON_TOOLTIP
-            = "Stops the server as soon as it is safe";
+    private static final String SERVER_STARTED_TOOLTIP   = "Server has started";
     private static final String EXIT_BUTTON_TEXT = "Exit";
     private static final String EXIT_BUTTON_TOOLTIP
             = "Stops the server as soon as it is safe and exits the application";
@@ -45,7 +43,7 @@ public class Server extends JFrame {
     private final ConfigPanel configPanel;
     // control panel
     private final JPanel ctrlPanel;
-    private final JButton startStopButton;
+    private final JButton startButton;
     private final JButton exitButton;
     // server status
     private int port;
@@ -62,7 +60,7 @@ public class Server extends JFrame {
 
         this.running = false;
 
-        this.startStopButton = new JButton();
+        this.startButton = new JButton(START_BUTTON_TEXT);
         this.exitButton = new JButton(EXIT_BUTTON_TEXT);
 
         configPanel = new ConfigPanel(Application.Mode.SERVER);
@@ -90,15 +88,9 @@ public class Server extends JFrame {
         JPanel panel = new JPanel();
         panel.setLayout(new FlowLayout(FlowLayout.CENTER));
 
-        if (running) {
-            startStopButton.setText(STOP_BUTTON_TEXT);
-            startStopButton.setToolTipText(START_BUTTON_TOOLTIP);
-        } else {
-            startStopButton.setText(START_BUTTON_TEXT);
-            startStopButton.setToolTipText(START_BUTTON_TOOLTIP);
-        }
-        startStopButton.addActionListener(new ServerAction());
-        panel.add(startStopButton);
+        startButton.setToolTipText(START_BUTTON_TOOLTIP);
+        startButton.addActionListener(new StartServer());
+        panel.add(startButton);
 
         exitButton.setToolTipText(EXIT_BUTTON_TOOLTIP);
         exitButton.addActionListener(new ActionListener() {
@@ -122,42 +114,15 @@ public class Server extends JFrame {
     }
 
     /**
-     * Class to handle the action of starting and stopping the server.
+     * Class to handle the action of starting the server.
      */
-    private class ServerAction implements ActionListener {
+    private class StartServer implements ActionListener {
 
         @Override
         public void actionPerformed(ActionEvent ae) {
             // start server
-            synchronized (startStopButton) {
-                if (running) {
-                    try {
-                        startStopButton.setEnabled(false);
-                        configPanel.setAllFieldsEnabled(false);
-                        DBConnection.unregister(port);
-                        running = false;
-                    } catch (RemoteException ex) {
-                        Application.handleException("Unable to stop server, "
-                                + "access to registry not granted", ex);
-                    } catch (IllegalArgumentException ex) {
-                        // should never happen with running server
-                        Application.handleException(
-                                "Illegal port number: " + port, ex);
-                    } catch (NotBoundException ex) {
-                        Application.handleException(
-                                "Running server not found on port: " + port, ex);
-                        running = false;
-                    } finally {
-                        if (running) {
-                            log.warning("Server still running.");
-                        } else {
-                            startStopButton.setText(START_BUTTON_TEXT);
-                            startStopButton.setToolTipText(START_BUTTON_TOOLTIP);
-                            configPanel.setAllFieldsEnabled(true);
-                        }
-                        startStopButton.setEnabled(true);
-                    }
-                } else if (configPanel.getLocationFieldText().isEmpty()) {
+            synchronized (startButton) {
+                if (configPanel.getLocationFieldText().isEmpty()) {
                     Application.handleException("Location not given.", null);
                 } else if (configPanel.getPortNumberText().isEmpty()) {
                     Application.handleException("Port number not given.", null);
@@ -165,24 +130,22 @@ public class Server extends JFrame {
                     location = configPanel.getLocationFieldText();
                     port = Integer.parseInt(configPanel.getPortNumberText());
                     try {
-                        startStopButton.setEnabled(false);
+                        startButton.setEnabled(false);
                         configPanel.setAllFieldsEnabled(false);
                         DBConnection.register(location, port);
                         running = true;
                     } catch (RemoteException ex) {
-                        Application.handleException("Unable to start server, "
-                                + "maybe port number already registered?", ex);
+                        Application.handleException("Unable to start server", ex);
                     } catch (IllegalArgumentException ex) {
                         Application.handleException("Illegal port number", ex);
                     } finally {
                         if (running) {
-                            startStopButton.setText(STOP_BUTTON_TEXT);
-                            startStopButton.setToolTipText(STOP_BUTTON_TOOLTIP);
+                            startButton.setToolTipText(SERVER_STARTED_TOOLTIP);
                             configPanel.save();
                         } else {
                             configPanel.setAllFieldsEnabled(true);
+                            startButton.setEnabled(true);
                         }
-                        startStopButton.setEnabled(true);
                     }
                 }
             }
