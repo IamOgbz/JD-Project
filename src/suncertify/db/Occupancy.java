@@ -60,16 +60,18 @@ public class Occupancy {
     public static final short RECORD_LENGTH = DELETED_FLAG + NAME_LENGTH
             + LOCATION_LENGTH + SIZE_LENGTH + SMOKING_LENGTH + RATE_LENGTH
             + DATE_LENGTH + OWNER_LENGTH;
-    /**
-     * The Logger instance. All log messages from this class are routed through
-     * this member. The Logger namespace is <code>suncertify.db</code>.
-     */
-    private static final Logger log = Logger.getLogger("suncertify.db");
 
     /**
      * Data Address. Store the offset location in the database file.
      */
-    //private long address;
+    public final long address;
+
+    /**
+     * The Logger instance. All log messages from this class are routed through
+     * this member. The Logger namespace is <code>suncertify.db</code>.
+     */
+    private static final Logger log = Logger.getLogger("suncertify.gui");
+
     /**
      * Deleted Flag. Store the state of the record.
      */
@@ -128,23 +130,30 @@ public class Occupancy {
      * night to which the record relates to. owner the customer holding this
      * occupancy.
      *
+     * @param address the record offset in the database file (recNo)
      * @param fields the values stored in reach record
      * @throws java.text.ParseException if the date string fails to be parsed
      */
-    public Occupancy(String[] fields) throws ParseException {
-        this.name = fields[0];
-        this.location = fields[1];
-        this.size = Integer.parseInt(fields[2]);
-        this.smoking = fields[3].charAt(0);
-        this.rate = fields[4];
-        this.date = DateFormat.getInstance().parse(fields[5]);
-        this.owner = fields[6];
-        this.deleted = fields[7].getBytes()[0];
+    public Occupancy(long address, String... fields) throws ParseException {
+        this.address = address;
+        if (fields == null) {
+            fields = new String[0];
+        }
+        this.name = fields.length > 0 ? fields[0] : null;
+        this.location = fields.length > 1 ? fields[1] : null;
+        this.size = fields.length > 2 ? Integer.parseInt(fields[2]) : 0;
+        this.smoking = fields.length > 3 ? fields[3].charAt(0) : ' ';
+        this.rate = fields.length > 4 ? fields[4] : null;
+        this.date = fields.length > 5
+                ? DateFormat.getInstance().parse(fields[5]) : null;
+        this.owner = fields.length > 6 ? fields[6] : null;
+        this.deleted = fields.length > 7 ? fields[7].getBytes()[0] : 0;
     }
 
     /**
      * Creates instance of this class with parameter values.
      *
+     * @param address the record offset in the database file (recNo)
      * @param name the name of the hotel.
      * @param location the city of the hotel.
      * @param size the maximum occupancy of the room.
@@ -154,8 +163,9 @@ public class Occupancy {
      * @param owner the customer holding this occupancy.
      * @param deleted a byte to set the deleted flag
      */
-    public Occupancy(String name, String location, short size,
+    public Occupancy(long address, String name, String location, short size,
             char smoking, String rate, Date date, String owner, byte deleted) {
+        this.address = address;
         this.name = name;
         this.location = location;
         this.size = size;
@@ -221,7 +231,7 @@ public class Occupancy {
      * @return the maximum occupancy of this room as a String
      */
     public String getSize() {
-        return String.valueOf(size);
+        return size != 0 ? String.valueOf(size) : null;
     }
 
     /**
@@ -244,7 +254,7 @@ public class Occupancy {
      * @return the room smoking value
      */
     public String getSmoking() {
-        return String.valueOf(smoking);
+        return smoking != ' ' ? String.valueOf(smoking) : null;
     }
 
     /**
@@ -272,7 +282,8 @@ public class Occupancy {
      * @return the date room is available in format yyyy/mm/dd
      */
     public String getDate() {
-        return new SimpleDateFormat("yyyy/mm/dd").format(date.getTime());
+        return date != null
+                ? new SimpleDateFormat("yyyy/mm/dd").format(date.getTime()) : null;
     }
 
     /**
@@ -303,7 +314,7 @@ public class Occupancy {
      * @return a string array representation of the occupancy
      */
     public String[] toRecord() {
-        String[] record = new String[]{getName(), getLocation(), getSize(), 
+        String[] record = new String[]{getName(), getLocation(), getSize(),
             getSmoking(), getRate(), getDate(), getOwner()};
         return record;
     }

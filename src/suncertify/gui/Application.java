@@ -1,42 +1,51 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package suncertify.gui;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 /**
+ * Application main class. Chooses which application module to run based on the
+ * command lone arguments.
  *
  * @author Emmanuel
  */
 public class Application {
 
-    public enum Mode {
+    /**
+     * The valid application modes
+     */
+    public static enum Mode {
 
         /**
          * the client mode
          */
-        ClIENT,
+        CLIENT,
         /**
          * the server mode
          */
         SERVER,
         /**
-         * the local mode
+         * the local database mode
          */
         STANDALONE;
     }
     /**
      * The Logger instance. All log messages from this class are routed through
-     * this member. The Logger namespace is <code>suncertify.db</code>.
+     * this member. The Logger namespace is <code>suncertify</code>.
      */
     private static final Logger log = Logger.getLogger("suncertify.gui");
 
-    public static void main(String[] args){
+    /**
+     * The method called upon Application execution.
+     *
+     * @param args the command line arguments, which should be either "server",
+     * "alone" or empty
+     */
+    public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (UnsupportedLookAndFeelException uex) {
@@ -48,10 +57,23 @@ public class Application {
         } catch (IllegalAccessException iaex) {
             log.warning("Look and feel cannot be used on this platform");
         }
-        
+
         // test for which type of application to run
+        Server server = new Server();
         // if args not valid log and display using system.err
-        
+    }
+
+    /**
+     * Handles exceptions that need to be displayed to the user.
+     *
+     * @param msg the message to be displayed
+     * @param ex the exception that was handled
+     */
+    public static void handleException(String msg, Exception ex) {
+        log.log(Level.WARNING, msg, ex);
+        JDialog alertDialog = new JOptionPane(msg, JOptionPane.ERROR_MESSAGE,
+                JOptionPane.DEFAULT_OPTION).createDialog("Alert");
+        alertDialog.setVisible(true);
     }
 
 }
