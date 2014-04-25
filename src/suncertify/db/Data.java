@@ -6,10 +6,10 @@ import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -67,7 +67,7 @@ public class Data implements DBAccess {
     /**
      * The location where the database file is stored.
      */
-    protected static String dbPath = null;
+    private static String dbPath = null;
 
     /**
      * The physical file on disk containing our data.
@@ -96,6 +96,12 @@ public class Data implements DBAccess {
     private long dataOffset;
 
     /**
+     * The number of bytes to be skipped when reading and writing the fields for
+     * each record. Used to skip the deleted flag byte.
+     */
+    private int recordOffset = 0;
+
+    /**
      * The number of fields in each record.
      */
     private int numFields;
@@ -109,7 +115,7 @@ public class Data implements DBAccess {
      * The character encoding used in the URLyBird database file. Default is
      * "UTF-8".
      */
-    protected Charset encoding;
+    private Charset encoding;
 
     /**
      * The length of the database file. Update after each call to
@@ -150,34 +156,32 @@ public class Data implements DBAccess {
                     new Object[]{dbPath});
             dbFile = new RandomAccessFile(dbPath, "rw");
         }
-        // instantiate the fields map
+
         fields = new LinkedHashMap<>();
-        // instantiate the data buffer
         dataBuffer = new LinkedHashMap<>();
-        // parse the header and set the data offset to the start of the records
-        readHeader();
+        parseHeader();
     }
 
     /**
-     * Performs read operations on database file, on instantiation
+     * Performs read operations on database file, on instantiation. Parses the
+     * header and sets the data offset to the start of the records.
      *
      * @return the position to start reading the data
      * @throws java.io.IOException
      */
-    private void readHeader() throws IOException {
-        // the offset storing the read operation cursor
-        long offset;
-        // set charater encoding used for the data
+    private void parseHeader() throws IOException {
+        // starting location of the header
+        long offset = 0;
         encoding = StandardCharsets.US_ASCII;
-        // add deleted flag the fields
-        //fields.put("deleted", 1);
-        // the length of the deleted field
-        recordLength = 1;
+        // the deleted flag
+        recordOffset = 1;
+        // add offset to the fields
+        //fields.put("deleted", recordOffset);
+        // start calculating from the length of the offset
+        recordLength = recordOffset;
         // prevents code that changes database while block executes
         dbRWLock.readLock().lock();
         try {
-            // starting location of the header
-            offset = 0;
             // go to the offset location in the database file
             dbFile.seek(offset);
             // reads 4 bytes from the file in the form of int
@@ -232,20 +236,6 @@ public class Data implements DBAccess {
     }
 
     /**
-     * Uses the schema loaded to populate the records and skips deleted records.
-     * Override this method to perform custom read data operations.
-     *
-     * @return list of <code>String[]</code> where each array is a record
-     * @throws IOException
-     */
-    public Collection<String[]> readData() throws IOException {
-        // retrieve all the data in the database
-        search("");
-        // return just the records from the data buffer
-        return dataBuffer.values();
-    }
-
-    /**
      * To perform read operations on the database file, without the underlying
      * information being changed during the process.
      *
@@ -295,8 +285,8 @@ public class Data implements DBAccess {
             // index used to store field values in array positions
             short idx = 0;
             // index used to get fields from data bytes
-            // ignoring the deleted flag byte
-            int fieldOffset = 1;
+            // skip the record offset
+            int fieldOffset = recordOffset;
             // array of string to represent the record
             String[] record = new String[numFields];
             // for each field name get the number of bytes
@@ -375,18 +365,18 @@ public class Data implements DBAccess {
                 criteria[i] = null;
             }
         }
-        // prevents code that changes database while searching
-        dbRWLock.readLock().lock();
-        try {
-            Object[] recNos;
-            // prevent the dataBuffer from being used while block executes
-            synchronized (dataBuffer) {
-                // clear the dataBuffer
-                dataBuffer.clear();
+        Object[] recNos;
+        // prevent the dataBuffer from being used while block executes
+        synchronized (dataBuffer) {
+            // clear the dataBuffer to save new set of records
+            dataBuffer.clear();
+            // create record variable for the loop
+            String[] record;
+            // prevents code that changes database while searching
+            dbRWLock.readLock().lock();
+            try {
                 // refresh the length of the database file
                 getDBFileLength();
-                // create record variable for the loop
-                String[] record;
                 // loop through database file and read records at each location
                 for (long offset = dataOffset; offset < dbFileLength;
                         offset += recordLength) {
@@ -410,20 +400,21 @@ public class Data implements DBAccess {
                                 ex);
                     }
                 }
-                // retrieve the record numbers from the dataBuffer
-                recNos = dataBuffer.keySet().toArray();
+            } finally {
+                dbRWLock.readLock().unlock();
             }
-            // create the result array
-            long[] result = new long[recNos.length];
-            // loop through and cast record numbers into the primitive long
-            for (int i = 0; i < recNos.length; i++) {
-                result[i] = (Long) recNos[i];
-            }
-            // return the primitive array of the result
-            return result;
-        } finally {
-            dbRWLock.readLock().unlock();
+            // retrieve the record numbers from the dataBuffer
+            recNos = dataBuffer.keySet().toArray();
         }
+        // create the result array
+        long[] result = new long[recNos.length];
+        // loop through and cast record numbers into the primitive long
+        for (int i = 0; i < recNos.length; i++) {
+            result[i] = (Long) recNos[i];
+        }
+        // return the primitive array of the result
+        return result;
+
     }
 
     /**
@@ -434,12 +425,16 @@ public class Data implements DBAccess {
      * @return the resulting records from the search
      */
     public Collection<String[]> search(String... params) {
-        // to prevent data buffer from being read in the middle of changes
         synchronized (dataBuffer) {
-            // get the records that match from the data file
-            findByCriteria(params);
-            // return the matching values stored in the data buffer
-            return dataBuffer.values();
+            try {
+                // get the records that match from the data file
+                findByCriteria(params);
+                // return the matching values stored in the data buffer
+                return dataBuffer.values();
+            } finally {
+                // clear the buffer
+                dataBuffer.clear();
+            }
         }
     }
 
@@ -482,12 +477,12 @@ public class Data implements DBAccess {
         short idx = 0;
         // index used to place fields in string builder
         int fieldOffset = 0;
-        dbRWLock.writeLock().lock();
-        try {
-            // field value object to be used
-            String fieldValue;
+        // field value object to be used
+        String fieldValue;
+        synchronized (recordBuilder) {
             // create the recordbuilder object to be used less deleted flag byte
-            recordBuilder = new StringBuilder(new String(new byte[recordLength - 1]));
+            recordBuilder = new StringBuilder(
+                    new String(new byte[recordLength - 1]));
             // for each field name get the number of bytes
             for (int fieldLength : fields.values()) {
                 fieldValue = record[idx];
@@ -496,8 +491,8 @@ public class Data implements DBAccess {
                     // pad end with blank string
                     fieldValue += " ";
                 }
-                // replace the empty string at the specified field offset with the 
-                // corresponding field value
+                // replace the empty string at the specified field offset with 
+                // the corresponding field value
                 recordBuilder.replace(fieldOffset, fieldOffset + fieldLength,
                         fieldValue);
                 // increment to the next field offset
@@ -512,8 +507,6 @@ public class Data implements DBAccess {
                 // return the build record byte array data
                 return recordBuilder.toString().getBytes();
             }
-        } finally {
-            dbRWLock.writeLock().unlock();
         }
     }
 
@@ -532,12 +525,12 @@ public class Data implements DBAccess {
         // prevent database file from being read/edited while being writen
         dbRWLock.writeLock().lock();
         try {
-            // write into database file, skipping the deleted flag byte
-            write(recNo + 1, prepareRecord(data));
+            // write into database file, skipping the record offset bytes
+            write(recNo + recordOffset, prepareRecord(data));
         } catch (IndexOutOfBoundsException ex) {
             log.log(Level.SEVERE, "Data exceeds record length"
                     + "\nRecord Length: {0}\nFields: {1}\nData: {2}\n{3}",
-                    new Object[]{recordLength, fields, toArrayString(data), ex});
+                    new Object[]{recordLength, fields, Arrays.toString(data), ex});
             throw new IOException();
         } finally {
             dbRWLock.writeLock().unlock();
@@ -579,12 +572,13 @@ public class Data implements DBAccess {
     public long createRecord(String[] data) throws DuplicateKeyException {
         // instantiate the final offset to a non usable value
         long finalOffset = -1;
+        // instantiate variable at start of records in database file
+        long offset = dataOffset;
         // prevents code that changes database while block executes
         dbRWLock.readLock().lock();
         try {
-            // instantiate variable at start of records in database file
-            long offset = dataOffset;
-            // loop through the database file and check for a free space at each location
+            getDBFileLength();
+            // loop through database checking for duplicates and first free space
             while (offset < dbFileLength) {
                 // read record in position
                 String[] record = readRecord(offset);
@@ -600,15 +594,16 @@ public class Data implements DBAccess {
                 // go to next record position
                 offset += recordLength;
             }
-            if (finalOffset < 0) {
-                finalOffset = offset;
-            }
         } catch (RecordNotFoundException ex) {
-            log.log(Level.WARNING, "Offset: {0}\n{1}", new Object[]{finalOffset, ex});
+            log.log(Level.WARNING, "Offset: {0}\n{1}",
+                    new Object[]{finalOffset, ex});
         } catch (IOException ex) {
             log.log(Level.SEVERE, "Could not read database file\n", ex);
         } finally {
             dbRWLock.readLock().unlock();
+        }
+        if (finalOffset < 0) {
+            finalOffset = offset;
         }
 
         // prevent code that reads/changes database while block executes
@@ -679,6 +674,13 @@ public class Data implements DBAccess {
         }
     }
 
+    /**
+     * Checks is a record has been locked using the <code>lockRecord</code>
+     * method.
+     *
+     * @param recNo the record number, its location in the file
+     * @return true if the record is locked
+     */
     public final boolean isLocked(long recNo) {
         return lockCookies.containsKey(recNo);
     }
@@ -735,43 +737,43 @@ public class Data implements DBAccess {
     /**
      * @return the magicCookie
      */
-    public int getMagicCookie() {
+    public final int getMagicCookie() {
         return magicCookie;
     }
 
     /**
      * @return the encoding
      */
-    public Charset getEncoding() {
+    public final Charset getEncoding() {
         return encoding;
     }
 
     /**
      * @return a string representation of the fields
      */
-    public String getFields() {
+    public final String getFields() {
         return fields.toString();
     }
 
     /**
      * @return the numFields
      */
-    public int getNumFields() {
+    public final int getNumFields() {
         return numFields;
-    }
-
-    /**
-     * @return the dataOffset
-     */
-    public long getDataOffset() {
-        return dataOffset;
     }
 
     /**
      * @return the recordLength
      */
-    public int getRecordLength() {
+    public final int getRecordLength() {
         return recordLength;
+    }
+
+    /**
+     * @return the dataOffset
+     */
+    public final long getDataOffset() {
+        return dataOffset;
     }
 
     /**
@@ -793,20 +795,6 @@ public class Data implements DBAccess {
             log.log(Level.SEVERE, "Could not read database file", ex);
         }
         return dbFileLength;
-    }
-
-    /**
-     * Take an array and returns a string formatted for printing.
-     *
-     * @param array the array to convert
-     * @return a string representation of the array
-     */
-    public static final String toArrayString(Object[] array) {
-        String as = "";
-        for (Object o : array) {
-            as += "[" + o.toString() + "](" + o.toString().length() + ") ";
-        }
-        return as;
     }
 
 }

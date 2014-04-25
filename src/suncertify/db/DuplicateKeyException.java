@@ -5,7 +5,7 @@ package suncertify.db;
  *
  * @author Emmanuel
  */
-class DuplicateKeyException extends Exception {
+public class DuplicateKeyException extends Exception {
 
     /**
      * The description about the exception.
@@ -26,6 +26,9 @@ class DuplicateKeyException extends Exception {
         this.description = desc;
     }
 
+    /**
+     * @return error description
+     */
     @Override
     public String getMessage() {
         return this.description;

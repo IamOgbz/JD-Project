@@ -5,7 +5,7 @@ package suncertify.db;
  *
  * @author Emmanuel
  */
-class RecordNotFoundException extends Exception {
+public class RecordNotFoundException extends Exception {
 
     /**
      * The description about the exception.
@@ -27,6 +27,9 @@ class RecordNotFoundException extends Exception {
         this.description = desc;
     }
 
+    /**
+     * @return error description
+     */
     @Override
     public String getMessage() {
         return this.description;

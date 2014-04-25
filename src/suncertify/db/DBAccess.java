@@ -54,7 +54,9 @@ public interface DBAccess {
      * Field n in the database file is described by criteria[n]. A null value in
      * criteria[n] matches any field value. A non-null value in criteria[n]
      * matches any field value that begins with criteria[n]. (For example,
-     * "Fred" matches "Fred" or "Freddy".)
+     * "Fred" matches "Fred" or "Freddy" and "" matches nothing.) The type of
+     * search implemented is OR so one null value would return all the records
+     * in the table.
      *
      * @param criteria the array of search criteria.
      * @return an array of matched records locations.
