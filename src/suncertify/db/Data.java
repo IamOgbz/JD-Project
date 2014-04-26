@@ -3,6 +3,7 @@ package suncertify.db;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -392,7 +393,6 @@ public class Data implements DBAccess {
         }
         // return the primitive array of the result
         return result;
-
     }
 
     /**
@@ -405,12 +405,10 @@ public class Data implements DBAccess {
     public Collection<String[]> search(String... params) {
         synchronized (dataBuffer) {
             try {
-                // get the records that match from the data file
                 findByCriteria(params);
-                // return the matching values stored in the data buffer
                 return dataBuffer.values();
             } finally {
-                // clear the buffer
+                // ensure that data buffer is cleared after search is done
                 dataBuffer.clear();
             }
         }
@@ -451,38 +449,30 @@ public class Data implements DBAccess {
      */
     private byte[] prepareRecord(String[] record)
             throws IndexOutOfBoundsException {
-        // index used to iterate over field values in record
         short idx = 0;
-        // index used to place fields in string builder
         int fieldOffset = 0;
-        // field value object to be used
         String fieldValue;
         synchronized (recordBuilder) {
-            // create the recordbuilder object to be used less deleted flag byte
+            // create the recordbuilder object to be used less record offset
             recordBuilder = new StringBuilder(
-                    new String(new byte[recordLength - 1]));
+                    new String(new byte[recordLength - recordOffset]));
             // for each field name get the number of bytes
             for (int fieldLength : fields.values()) {
                 fieldValue = record[idx];
                 // ensure the field value in record at least the correct length
                 while (fieldValue.length() < fieldLength) {
-                    // pad end with blank string
                     fieldValue += " ";
                 }
-                // replace the empty string at the specified field offset with 
-                // the corresponding field value
                 recordBuilder.replace(fieldOffset, fieldOffset + fieldLength,
                         fieldValue);
-                // increment to the next field offset
+                
                 fieldOffset += fieldLength;
-                // increment to the next field value
                 idx++;
             }
             // if the built record exceeds the specified record length
             if (recordBuilder.length() >= recordLength) {
                 throw new IndexOutOfBoundsException("Record built is too long");
             } else {
-                // return the build record byte array data
                 return recordBuilder.toString().getBytes();
             }
         }
@@ -539,7 +529,7 @@ public class Data implements DBAccess {
                 if (result != 0) {
                     return result;
                 }
-                // continue checking until all fields are compared
+                // else continue checking until all fields are compared
             }
         }
         // if the record fields were always equal
@@ -681,9 +671,8 @@ public class Data implements DBAccess {
                 log.info("Preparing to lock");
                 // use system nano time as seed to generate unique cookie
                 byte[] seed = String.valueOf(System.nanoTime()).getBytes();
-                // generate a secure lock cookie
                 long cookie = new SecureRandom(seed).nextLong();
-                // lock the record with the cookie
+                
                 lockCookies.put(recNo, cookie);
                 log.log(Level.INFO, "Locked\nRecord: {0}\nCookie: {1}",
                         new Object[]{recNo, cookie});

@@ -44,7 +44,7 @@ public class Server extends JFrame {
     private final JButton startButton;
     private final JButton exitButton;
     // server status
-    private int port;
+    private String port;
     private boolean running;
     private String location;
 
@@ -126,16 +126,17 @@ public class Server extends JFrame {
                     Application.handleException("Port number not given.", null);
                 } else {
                     location = configPanel.getLocationFieldText();
-                    port = Integer.parseInt(configPanel.getPortNumberText());
+                    port = configPanel.getPortNumberText();
                     try {
                         startButton.setEnabled(false);
                         configPanel.setAllFieldsEnabled(false);
                         DBConnection.register(location, port);
                         running = true;
-                    } catch (RemoteException ex) {
-                        Application.handleException("Unable to start server", ex);
-                    } catch (IllegalArgumentException ex) {
-                        Application.handleException("Illegal port number", ex);
+                    } catch (RemoteException rex) {
+                        Application.handleException("Unable to start server", rex);
+                    } catch (IllegalArgumentException iex) {
+                        Application.handleException(
+                                "Illegal port number.\n"+iex.getMessage(), iex);
                     } finally {
                         if (running) {
                             startButton.setToolTipText(SERVER_STARTED_TOOLTIP);

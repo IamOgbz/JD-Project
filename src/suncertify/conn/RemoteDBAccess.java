@@ -1,12 +1,12 @@
 package suncertify.conn;
 
 import java.rmi.Remote;
-import suncertify.db.DBAccess;
+import suncertify.db.URLyBirdDBAccess;
 
 /**
- * Interface for remote database access.
- * 
+ * Interface for client access the database remotely.
+ *
  * @author Emmanuel
  */
-public interface RemoteDBAccess extends Remote, DBAccess {
+public interface RemoteDBAccess extends Remote, URLyBirdDBAccess {
 }

@@ -1,24 +1,30 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package suncertify.conn;
 
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Collection;
 import java.util.logging.Logger;
-import suncertify.db.DBAccess;
-import suncertify.db.Data;
-import suncertify.db.DuplicateKeyException;
-import suncertify.db.RecordNotFoundException;
+import suncertify.db.Occupancy;
+import suncertify.db.URLyBirdDBAccess;
+import suncertify.db.URLyBirdData;
 
 /**
- * Used to interface between the client and the data layer
+ * For client to remotely access database.
  *
  * @author Emmanuel
  */
 public class RemoteData extends UnicastRemoteObject implements RemoteDBAccess {
 
     /**
-     * the object that accesses out database
+     * The database access object being wrapped.
      */
-    private final DBAccess db;
+    private final URLyBirdDBAccess database;
 
     /**
      * The Logger instance. All log messages from this class are routed through
@@ -27,48 +33,41 @@ public class RemoteData extends UnicastRemoteObject implements RemoteDBAccess {
     private static final Logger log = Logger.getLogger("suncertify.conn");
 
     /**
-     * Instantiates a remote object to be used for invoking the server remotely.
+     * Instantiates a URLyBird object to be used for accessing the database.
      *
      * @param databasePath the database location.
-     * @throws IOException
+     * @throws RemoteException
      */
-    public RemoteData(String databasePath) throws IOException {
-            this.db = new Data(databasePath);
+    public RemoteData(String databasePath) throws RemoteException {
+        try {
+            database = new URLyBirdData(databasePath);
+        } catch (IOException ex) {
+            throw new RemoteException("Unable to access database file.");
+        }
     }
 
     @Override
-    public String[] readRecord(long recNo) throws RecordNotFoundException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public Occupancy getOccupancy(long address)
+            throws RemoteException, IOException {
+        return database.getOccupancy(address);
     }
 
     @Override
-    public void updateRecord(long recNo, String[] data, long lockCookie) throws RecordNotFoundException, SecurityException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void setOccupancy(Occupancy occupancy, boolean append)
+            throws RemoteException, IOException {
+        database.setOccupancy(occupancy, append);
     }
 
     @Override
-    public void deleteRecord(long recNo, long lockCookie) throws RecordNotFoundException, SecurityException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public Collection<Occupancy> getOccupancies()
+            throws RemoteException, IOException {
+        return database.getOccupancies();
     }
 
     @Override
-    public long[] findByCriteria(String[] criteria) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public long createRecord(String[] data) throws DuplicateKeyException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public long lockRecord(long recNo) throws RecordNotFoundException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public void unlock(long recNo, long cookie) throws SecurityException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public Collection<Occupancy> searchOccupancies(String... params)
+            throws RemoteException, IOException {
+        return database.searchOccupancies(params);
     }
 
 }

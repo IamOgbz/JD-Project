@@ -61,8 +61,8 @@ public class Application {
         }
 
         // test for which type of application to run
-        Server server = new Server();
-        // if args not valid log and display using system.err
+        //Server server = new Server();
+        Client client = new Client(args);
     }
 
     /**

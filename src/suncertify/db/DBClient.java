@@ -10,7 +10,7 @@ import java.util.logging.Logger;
  *
  * @author Emmanuel
  */
-public class Client {
+public class DBClient {
 
     private static final Logger log = Logger.getLogger("suncertify.db");
 

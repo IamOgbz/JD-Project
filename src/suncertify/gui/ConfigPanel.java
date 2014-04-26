@@ -123,6 +123,9 @@ public class ConfigPanel extends JPanel {
             gridConstraints.anchor = GridBagConstraints.WEST;
             gridLayout.setConstraints(portNumber, gridConstraints);
             this.add(portNumber);
+        } else {
+            // port number is for use
+            portNumber.setText("-1");
         }
     }
 
