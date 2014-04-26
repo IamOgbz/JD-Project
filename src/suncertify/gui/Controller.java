@@ -79,7 +79,7 @@ public class Controller {
                 try {
                     log.info(db.getOccupancies().toString());
                 } catch (IOException ex) {
-                    log.severe("Call to get occupancies failed.");
+                    log.log(Level.SEVERE, "Call to get occupancies failed.", ex);
                 }
             }
         }

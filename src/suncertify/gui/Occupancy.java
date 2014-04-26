@@ -1,5 +1,6 @@
 package suncertify.gui;
 
+import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -13,7 +14,7 @@ import java.util.logging.Logger;
  *
  * @author Emmanuel
  */
-public class Occupancy {
+public class Occupancy implements Serializable {
 
     /**
      * The size of the flag that specifies if a record has been deleted.
@@ -71,7 +72,7 @@ public class Occupancy {
      * The Logger instance. All log messages from this class are routed through
      * this member. The Logger namespace is <code>suncertify.db</code>.
      */
-    private static final Logger log = Logger.getLogger("suncertify.gui");
+    private static transient final Logger log = Logger.getLogger("suncertify.gui");
 
     /**
      * Deleted Flag. Store the state of the record.
@@ -139,19 +140,26 @@ public class Occupancy {
         if (fields == null) {
             fields = new String[0];
         }
-        this.name = fields.length > 0 ? fields[0] : null;
-        this.location = fields.length > 1 ? fields[1] : null;
-        this.size = fields.length > 2 ? Integer.parseInt(fields[2]) : 0;
+        this.name = fields.length > 0 ? fields[0].trim() : null;
+        this.location = fields.length > 1 ? fields[1].trim() : null;
+        try {
+            this.size = fields.length > 2 ? Integer.parseInt(fields[2].trim()) : 0;
+        } catch (NumberFormatException ex) {
+            log.log(Level.WARNING, "{0} could not be parsed into int {1}",
+                    new Object[]{fields[2].trim(), ex});
+            this.size = 0;
+        }
         this.smoking = fields.length > 3 ? fields[3].charAt(0) : ' ';
-        this.rate = fields.length > 4 ? fields[4] : null;
+        this.rate = fields.length > 4 ? fields[4].trim() : null;
         try {
             this.date = fields.length > 5
-                    ? DateFormat.getInstance().parse(fields[5]) : null;
+                    ? DateFormat.getInstance().parse(fields[5].trim()) : null;
         } catch (ParseException ex) {
-            log.log(Level.WARNING, fields[5] + " could not be parsed into Date", ex);
+            log.log(Level.WARNING, "{0} could not be parsed into Date {1}",
+                    new Object[]{fields[5].trim(), ex});
             this.date = null;
         }
-        this.owner = fields.length > 6 ? fields[6] : null;
+        this.owner = fields.length > 6 ? fields[6].trim() : null;
         this.deleted = fields.length > 7 ? fields[7].getBytes()[0] : 0;
     }
 
