@@ -5,8 +5,11 @@
  */
 package suncertify.db;
 
+import suncertify.gui.Occupancy;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.Map;
 
 /**
  * Wrapper class for the database access implementation. For URLyBird clients to
@@ -29,23 +32,59 @@ public class URLyBirdData implements URLyBirdDBAccess {
     }
 
     @Override
-    public Occupancy getOccupancy(long address) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public Occupancy getOccupancy(long address) throws IOException {
+        try {
+            String[] record = database.readRecord(address);
+            return new Occupancy(address, record);
+        } catch (RecordNotFoundException ex) {
+            throw new IOException("Could not get occupancy");
+        }
     }
 
     @Override
-    public void setOccupancy(Occupancy occupancy, boolean append) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public void setOccupancy(Occupancy occupancy, boolean append)
+            throws IOException {
+        long recNo = -1, lockCookie = -1;
+        String[] data = occupancy.toRecord();
+        if (append) {
+            try {
+                database.createRecord(data);
+            } catch (DuplicateKeyException ex) {
+                throw new IOException("Could not insert occupancy");
+            }
+        } else {
+            try {
+                recNo = occupancy.getAddress();
+                lockCookie = database.lockRecord(recNo);
+                database.updateRecord(recNo, data, lockCookie);
+            } catch (RecordNotFoundException ex) {
+                throw new IOException("Could not find occupancy");
+            } finally {
+                if (database.isLocked(recNo)) {
+                    database.unlock(recNo, lockCookie);
+                }
+            }
+        }
     }
 
     @Override
     public Collection<Occupancy> getOccupancies() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return searchOccupancies();
     }
 
     @Override
     public Collection<Occupancy> searchOccupancies(String... params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (params.length > 0) {
+            Data.swapNulls(params, "");
+        } else {
+            params = new String[]{null};
+        }
+        Map<Long, String[]> result = database.search(params);
+        Collection<Occupancy> occupancies = new LinkedList<>();
+        for (Long recNo : result.keySet()) {
+            occupancies.add(new Occupancy(recNo, result.get(recNo)));
+        }
+        return occupancies;
     }
 
 }

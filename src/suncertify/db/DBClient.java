@@ -21,8 +21,8 @@ public class DBClient {
      */
     public static void main(String[] args) {
         try {
-            Data urlybirdData = new Data("C:\\Users\\Emmanuel\\Documents\\Training\\Koenig\\jd\\Project\\instructions-121\\db-1x1.db");
-            Collection<String[]> data = urlybirdData.search("");
+            Data database = new Data("C:\\Users\\Emmanuel\\Documents\\Training\\Koenig\\jd\\Project\\instructions-121\\db-1x1.db");
+            Collection<String[]> data = database.search(new String[]{null}).values();
             String results = "";
             for (String[] record : data) {
                 results += "\n" + toArrayString(record);

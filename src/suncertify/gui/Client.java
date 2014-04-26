@@ -46,12 +46,11 @@ public class Client extends JFrame {
             if (config) {
                 log.info("Attempting to connect using accepted configuration.");
                 controller = new Controller(connType, location, port);
-                log.log(Level.INFO, "Connection successful: {0}",
-                        controller.isConnected());
             } else {
                 System.exit(0);
             }
         } while (!controller.isConnected());
+        System.exit(0);
     }
 
     /**

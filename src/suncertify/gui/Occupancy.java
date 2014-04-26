@@ -1,9 +1,10 @@
-package suncertify.db;
+package suncertify.gui;
 
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -64,7 +65,7 @@ public class Occupancy {
     /**
      * Data Address. Store the offset location in the database file.
      */
-    public final long address;
+    protected final long address;
 
     /**
      * The Logger instance. All log messages from this class are routed through
@@ -132,9 +133,8 @@ public class Occupancy {
      *
      * @param address the record offset in the database file (recNo)
      * @param fields the values stored in reach record
-     * @throws java.text.ParseException if the date string fails to be parsed
      */
-    public Occupancy(long address, String... fields) throws ParseException {
+    public Occupancy(long address, String... fields) {
         this.address = address;
         if (fields == null) {
             fields = new String[0];
@@ -144,8 +144,13 @@ public class Occupancy {
         this.size = fields.length > 2 ? Integer.parseInt(fields[2]) : 0;
         this.smoking = fields.length > 3 ? fields[3].charAt(0) : ' ';
         this.rate = fields.length > 4 ? fields[4] : null;
-        this.date = fields.length > 5
-                ? DateFormat.getInstance().parse(fields[5]) : null;
+        try {
+            this.date = fields.length > 5
+                    ? DateFormat.getInstance().parse(fields[5]) : null;
+        } catch (ParseException ex) {
+            log.log(Level.WARNING, fields[5] + " could not be parsed into Date", ex);
+            this.date = null;
+        }
         this.owner = fields.length > 6 ? fields[6] : null;
         this.deleted = fields.length > 7 ? fields[7].getBytes()[0] : 0;
     }
@@ -177,6 +182,15 @@ public class Occupancy {
     }
 
     /**
+     * The address of the record in the database file.
+     *
+     * @return the address
+     */
+    public long getAddress() {
+        return address;
+    }
+
+    /**
      * If the record is deleted or not.
      *
      * @return true if the deleted flag is greater than 0
@@ -186,6 +200,8 @@ public class Occupancy {
     }
 
     /**
+     * Byte representing the deletion status of the occupancy.
+     *
      * @return the deleted flag as a string ("1" for deleted)
      */
     public byte getDeleted() {
@@ -193,6 +209,8 @@ public class Occupancy {
     }
 
     /**
+     * Set the byte representing the deletion status of the occupancy.
+     *
      * @param deleted set the deleted flag (1 for deleted)
      */
     public void setDeleted(byte deleted) {
@@ -200,13 +218,18 @@ public class Occupancy {
     }
 
     /**
+     * Name of the hotel, truncated if value is longer than the record field.
+     *
      * @return the name of the hotel
      */
     public String getName() {
-        return name;
+        return name.length() <= NAME_LENGTH ? name
+                : name.substring(0, NAME_LENGTH);
     }
 
     /**
+     * Sets name of the hotel
+     *
      * @param name the name of the hotel
      */
     public void setName(String name) {
@@ -214,13 +237,18 @@ public class Occupancy {
     }
 
     /**
+     * City location, truncated if value is longer than the record field.
+     *
      * @return the city location of the hotel
      */
     public String getLocation() {
-        return location;
+        return location.length() <= LOCATION_LENGTH ? location
+                : location.substring(0, LOCATION_LENGTH);
     }
 
     /**
+     * Sets the hotel city.
+     *
      * @param location the city of the hotel
      */
     public void setLocation(String location) {
@@ -228,6 +256,8 @@ public class Occupancy {
     }
 
     /**
+     * Maximum room occupancy.
+     *
      * @return the maximum occupancy of this room as a String
      */
     public String getSize() {
@@ -235,6 +265,8 @@ public class Occupancy {
     }
 
     /**
+     * Sets the maximum room occupancy.
+     *
      * @param size set the maximum occupancy of this room
      */
     public void setSize(int size) {
@@ -251,6 +283,8 @@ public class Occupancy {
     }
 
     /**
+     * Return the room smoking value.
+     *
      * @return the room smoking value
      */
     public String getSmoking() {
@@ -258,17 +292,39 @@ public class Occupancy {
     }
 
     /**
+     * Set the room smoking option. Accepted values are 'Y' or 'N'.
+     *
      * @param smoking set the room smoking value
      */
     public void setSmoking(char smoking) {
-        this.smoking = smoking;
+        switch (smoking) {
+            case ' ':
+            case 'Y':
+            case 'N':
+                this.smoking = smoking;
+                break;
+            case 'y':
+            case 'n':
+                this.smoking = Character.toUpperCase(smoking);
+                break;
+            case '1':
+                this.smoking = 'Y';
+                break;
+            case '0':
+            default:
+                this.smoking = 'N';
+        }
     }
 
     /**
+     * Return the per night rate of the room, including currency. Value is
+     * truncated if value is longer than the record field.
+     *
      * @return the price per night
      */
     public String getRate() {
-        return rate;
+        return rate.length() <= RATE_LENGTH ? rate
+                : rate.substring(0, RATE_LENGTH);
     }
 
     /**
@@ -294,13 +350,19 @@ public class Occupancy {
     }
 
     /**
+     * Returns the id of customer holding this occupancy, truncated if value is
+     * longer than the record field.
+     *
      * @return owner, the customer holding this record
      */
     public String getOwner() {
-        return owner;
+        return owner.length() <= OWNER_LENGTH ? owner
+                : owner.substring(0, OWNER_LENGTH);
     }
 
     /**
+     * Set the id of the customer holding this occupancy.
+     *
      * @param owner set the customer holding this record
      */
     public void setOwner(String owner) {

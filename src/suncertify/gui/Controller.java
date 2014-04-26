@@ -65,20 +65,22 @@ public class Controller {
                 } catch (IllegalArgumentException iae) {
                     Application.handleException("Port (" + port + ") error, "
                             + iae.getMessage(), iae);
-                } catch (Exception e) {
-                    log.log(Level.SEVERE, "{0}", new Object[]{e});
                 }
                 break;
             default:
                 // should never happen
                 Exception e = new IllegalStateException("Unknown connection type");
-                Application.handleException("Unable to connect to database", e);
+                Application.handleException("Unable to start connection", e);
         }
         if (connected) {
             if (db == null) {
-                log.info("Not connected");
+                log.info("False connection");
             } else {
-                log.info(db.toString());
+                try {
+                    log.info(db.getOccupancies().toString());
+                } catch (IOException ex) {
+                    log.severe("Call to get occupancies failed.");
+                }
             }
         }
     }

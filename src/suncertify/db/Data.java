@@ -335,17 +335,28 @@ public class Data implements DBAccess {
         return matches;
     }
 
-    @Override
-    public long[] findByCriteria(String[] criteria) {
-        // replace null values with empty string and vice versa, since
-        // findByCritetia definition is the reverse of matchRecord deinition
-        for (int i = 0; i < criteria.length; i++) {
-            if (criteria[i] == null) {
-                criteria[i] = "";
-            } else if (criteria[i].isEmpty()) {
-                criteria[i] = null;
+    /**
+     * Utility method to replace nulls in array with swapValue and vice versa
+     *
+     * @param toSwap array to perform null swap on
+     * @param swapValue replacement value for nulls
+     * @return the swapped null array
+     */
+    public static String[] swapNulls(String[] toSwap, String swapValue) {
+        for (int i = 0; i < toSwap.length; i++) {
+            if (toSwap[i] == null) {
+                toSwap[i] = swapValue;
+            } else if (swapValue.equals(toSwap[i])) {
+                toSwap[i] = null;
             }
         }
+        return toSwap;
+    }
+
+    @Override
+    public long[] findByCriteria(String[] criteria) {
+        // findByCritetia definition is the reverse of matchRecord deinition
+        criteria = swapNulls(criteria, "");
 
         Object[] recNos;
         // prevent the dataBuffer from being used while block executes
@@ -368,6 +379,7 @@ public class Data implements DBAccess {
                             if (matchRecord(criteria, record) > 0) {
                                 // add the record to the data buffer
                                 dataBuffer.put(offset, record);
+                            } else {
                             }
                         }
                     } catch (RecordNotFoundException ex) {
@@ -402,14 +414,14 @@ public class Data implements DBAccess {
      * @param params the search parameters
      * @return the resulting records from the search
      */
-    public Collection<String[]> search(String... params) {
+    public Map<Long, String[]> search(String... params) {
         synchronized (dataBuffer) {
             try {
                 findByCriteria(params);
-                return dataBuffer.values();
+                return new LinkedHashMap<>(dataBuffer);
             } finally {
                 // ensure that data buffer is cleared after search is done
-                dataBuffer.clear();
+                //dataBuffer.clear();
             }
         }
     }
@@ -465,7 +477,7 @@ public class Data implements DBAccess {
                 }
                 recordBuilder.replace(fieldOffset, fieldOffset + fieldLength,
                         fieldValue);
-                
+
                 fieldOffset += fieldLength;
                 idx++;
             }
@@ -672,7 +684,7 @@ public class Data implements DBAccess {
                 // use system nano time as seed to generate unique cookie
                 byte[] seed = String.valueOf(System.nanoTime()).getBytes();
                 long cookie = new SecureRandom(seed).nextLong();
-                
+
                 lockCookies.put(recNo, cookie);
                 log.log(Level.INFO, "Locked\nRecord: {0}\nCookie: {1}",
                         new Object[]{recNo, cookie});

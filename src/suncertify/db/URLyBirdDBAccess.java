@@ -1,5 +1,6 @@
 package suncertify.db;
 
+import suncertify.gui.Occupancy;
 import java.io.IOException;
 import java.util.Collection;
 
