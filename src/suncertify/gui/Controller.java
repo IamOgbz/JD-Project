@@ -6,7 +6,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import suncertify.conn.DBConnection;
 import suncertify.conn.RemoteDBAccess;
-import suncertify.db.Data;
 import suncertify.db.URLyBirdDBAccess;
 import suncertify.db.URLyBirdData;
 
@@ -41,7 +40,8 @@ public class Controller {
      * @param location the location of the database
      * @param port the port used in a server client connection
      */
-    public Controller(DBConnection.Type connectionType, String location, String port) {
+    public Controller(DBConnection.Type connectionType, 
+            String location, String port) {
         connected = false;
         String s = "";
         switch (connectionType) {

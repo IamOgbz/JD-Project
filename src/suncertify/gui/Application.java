@@ -61,7 +61,7 @@ public class Application {
         }
 
         // test for which type of application to run
-        Server server = new Server();
+        //Server server = new Server();
         Client client = new Client(args);
     }
 

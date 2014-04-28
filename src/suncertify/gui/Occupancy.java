@@ -62,17 +62,19 @@ public class Occupancy implements Serializable {
     public static final short RECORD_LENGTH = DELETED_FLAG + NAME_LENGTH
             + LOCATION_LENGTH + SIZE_LENGTH + SMOKING_LENGTH + RATE_LENGTH
             + DATE_LENGTH + OWNER_LENGTH;
-
-    /**
-     * Data Address. Store the offset location in the database file.
-     */
-    protected final long address;
+    
+    private static DateFormat dateFormat = new SimpleDateFormat("yyyy/mm/dd");
 
     /**
      * The Logger instance. All log messages from this class are routed through
      * this member. The Logger namespace is <code>suncertify.db</code>.
      */
-    private static transient final Logger log = Logger.getLogger("suncertify.gui");
+    private static final Logger log = Logger.getLogger("suncertify.gui");
+
+    /**
+     * Data Address. Store the offset location in the database file.
+     */
+    private final long address;
 
     /**
      * Deleted Flag. Store the state of the record.
@@ -153,7 +155,7 @@ public class Occupancy implements Serializable {
         this.rate = fields.length > 4 ? fields[4].trim() : null;
         try {
             this.date = fields.length > 5
-                    ? DateFormat.getInstance().parse(fields[5].trim()) : null;
+                    ? dateFormat.parse(fields[5].trim()) : null;
         } catch (ParseException ex) {
             log.log(Level.WARNING, "{0} could not be parsed into Date {1}",
                     new Object[]{fields[5].trim(), ex});
@@ -347,7 +349,7 @@ public class Occupancy implements Serializable {
      */
     public String getDate() {
         return date != null
-                ? new SimpleDateFormat("yyyy/mm/dd").format(date.getTime()) : null;
+                ? dateFormat.format(date.getTime()) : null;
     }
 
     /**

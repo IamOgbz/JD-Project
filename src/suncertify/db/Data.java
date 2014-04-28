@@ -3,12 +3,10 @@ package suncertify.db;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -421,7 +419,7 @@ public class Data implements DBAccess {
                 return new LinkedHashMap<>(dataBuffer);
             } finally {
                 // ensure that data buffer is cleared after search is done
-                //dataBuffer.clear();
+                dataBuffer.clear();
             }
         }
     }

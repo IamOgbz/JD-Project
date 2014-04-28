@@ -50,7 +50,7 @@ public class Client extends JFrame {
                 System.exit(0);
             }
         } while (!controller.isConnected());
-        System.exit(0);
+        
     }
 
     /**
