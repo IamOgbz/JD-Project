@@ -1,5 +1,6 @@
 package suncertify.gui;
 
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JDialog;
@@ -61,12 +62,24 @@ public class Application {
         }
 
         // test for which type of application to run
-        //Server server = new Server();
-        Client client = new Client(args);
+        if(args.length == 0 || "alone".equals(args[0])){
+            new Client(args);
+        } else if ("server".equals(args[0])){
+            new Server();
+        } else {
+            log.log(Level.INFO, "Invalid launch parameter passed: ", 
+                    Arrays.toString(args));
+            System.err.println("Valid launch parameters are: ");
+            System.err.println("\"alone\" - to start in standalone mode");
+            System.err.println("\"server\" - to start in server mode");
+            System.err.println("\"\" (nothing) - to start in client mode");
+        }
+        
     }
 
     /**
-     * Handles exceptions that need to be displayed to the user.
+     * Handles exceptions that need to be displayed to the user. Exceptions are
+     * displayed to the user as errors, while others are displayed as alerts.
      *
      * @param msg the message to be displayed
      * @param ex the exception that was handled

@@ -62,7 +62,7 @@ public class Occupancy implements Serializable {
     public static final short RECORD_LENGTH = DELETED_FLAG + NAME_LENGTH
             + LOCATION_LENGTH + SIZE_LENGTH + SMOKING_LENGTH + RATE_LENGTH
             + DATE_LENGTH + OWNER_LENGTH;
-    
+
     private static DateFormat dateFormat = new SimpleDateFormat("yyyy/mm/dd");
 
     /**
@@ -145,7 +145,8 @@ public class Occupancy implements Serializable {
         this.name = fields.length > 0 ? fields[0].trim() : null;
         this.location = fields.length > 1 ? fields[1].trim() : null;
         try {
-            this.size = fields.length > 2 ? Integer.parseInt(fields[2].trim()) : 0;
+            this.size = fields.length > 2
+                    ? Integer.parseInt(fields[2].trim()) : 0;
         } catch (NumberFormatException ex) {
             log.log(Level.WARNING, "{0} could not be parsed into int {1}",
                     new Object[]{fields[2].trim(), ex});
@@ -233,8 +234,12 @@ public class Occupancy implements Serializable {
      * @return the name of the hotel
      */
     public String getName() {
-        return name.length() <= NAME_LENGTH ? name
-                : name.substring(0, NAME_LENGTH);
+        if (name != null) {
+            return name.length() <= NAME_LENGTH ? name
+                    : name.substring(0, NAME_LENGTH);
+        } else {
+            return "";
+        }
     }
 
     /**
@@ -252,8 +257,12 @@ public class Occupancy implements Serializable {
      * @return the city location of the hotel
      */
     public String getLocation() {
-        return location.length() <= LOCATION_LENGTH ? location
-                : location.substring(0, LOCATION_LENGTH);
+        if (location != null) {
+            return location.length() <= LOCATION_LENGTH ? location
+                    : location.substring(0, LOCATION_LENGTH);
+        } else {
+            return "";
+        }
     }
 
     /**
@@ -271,7 +280,7 @@ public class Occupancy implements Serializable {
      * @return the maximum occupancy of this room as a String
      */
     public String getSize() {
-        return size != 0 ? String.valueOf(size) : null;
+        return size != 0 ? String.valueOf(size) : "";
     }
 
     /**
@@ -333,8 +342,12 @@ public class Occupancy implements Serializable {
      * @return the price per night
      */
     public String getRate() {
-        return rate.length() <= RATE_LENGTH ? rate
-                : rate.substring(0, RATE_LENGTH);
+        if (rate != null) {
+            return rate.length() <= RATE_LENGTH ? rate
+                    : rate.substring(0, RATE_LENGTH);
+        } else {
+            return "";
+        }
     }
 
     /**
@@ -345,11 +358,33 @@ public class Occupancy implements Serializable {
     }
 
     /**
-     * @return the date room is available in format yyyy/mm/dd
+     * @return the date the room is available in pattern yyyy/mm/dd
      */
-    public String getDate() {
-        return date != null
-                ? dateFormat.format(date.getTime()) : null;
+    public String getFormattedDate() {
+        return getFormattedDate("yyyy/mm/dd");
+    }
+
+    /**
+     * @param pattern the format to return the date in (default is yyyy/mm/dd)
+     * @return the date the room is available in format pattern
+     */
+    public String getFormattedDate(String pattern) {
+        String formattedDate = "";
+        try {
+            formattedDate = new SimpleDateFormat(pattern).format(date);
+            return formattedDate;
+        } catch (IllegalArgumentException ex) {
+            log.log(Level.WARNING, "\"{0}\" is not a valid pattern.\n{1}",
+                    new Object[]{pattern, ex});
+            return formattedDate;
+        }
+    }
+
+    /**
+     * @return the date room is available
+     */
+    public Date getDate() {
+        return date;
     }
 
     /**
@@ -359,6 +394,10 @@ public class Occupancy implements Serializable {
         this.date = date;
     }
 
+    public boolean hasOwner() {
+        return owner != null && owner.length() > 0;
+    }
+
     /**
      * Returns the id of customer holding this occupancy, truncated if value is
      * longer than the record field.
@@ -366,8 +405,12 @@ public class Occupancy implements Serializable {
      * @return owner, the customer holding this record
      */
     public String getOwner() {
-        return owner.length() <= OWNER_LENGTH ? owner
-                : owner.substring(0, OWNER_LENGTH);
+        if (owner != null) {
+            return owner.length() <= OWNER_LENGTH ? owner
+                    : owner.substring(0, OWNER_LENGTH);
+        } else {
+            return "";
+        }
     }
 
     /**
@@ -387,7 +430,7 @@ public class Occupancy implements Serializable {
      */
     public String[] toRecord() {
         String[] record = new String[]{getName(), getLocation(), getSize(),
-            getSmoking(), getRate(), getDate(), getOwner()};
+            getSmoking(), getRate(), getFormattedDate(), getOwner()};
         return record;
     }
 

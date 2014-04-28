@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Collection;
+import java.util.Map;
 import java.util.logging.Logger;
 import suncertify.gui.Occupancy;
 import suncertify.db.URLyBirdDBAccess;

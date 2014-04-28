@@ -17,12 +17,12 @@ import suncertify.db.URLyBirdData;
 public class Controller {
 
     /**
-     * the object that accesses our database
+     * The object that accesses our database.
      */
     private URLyBirdDBAccess db;
 
     /**
-     * variable to store the connection state of the controller
+     * Connection state of the controller.
      */
     private boolean connected;
 
@@ -40,7 +40,7 @@ public class Controller {
      * @param location the location of the database
      * @param port the port used in a server client connection
      */
-    public Controller(DBConnection.Type connectionType, 
+    public Controller(DBConnection.Type connectionType,
             String location, String port) {
         connected = false;
         String s = "";
@@ -72,17 +72,6 @@ public class Controller {
                 Exception e = new IllegalStateException("Unknown connection type");
                 Application.handleException("Unable to start connection", e);
         }
-        if (connected) {
-            if (db == null) {
-                log.info("False connection");
-            } else {
-                try {
-                    log.info(db.getOccupancies().toString());
-                } catch (IOException ex) {
-                    log.log(Level.SEVERE, "Call to get occupancies failed.", ex);
-                }
-            }
-        }
     }
 
     /**
@@ -94,4 +83,53 @@ public class Controller {
         return connected;
     }
 
+    /**
+     * Sets up a table model with column specifications and data gotten from the
+     * database.
+     *
+     * @return TableModel consisting of table specifications and data
+     */
+    public OccupancyTable getTable() {
+        return searchTable(null, null);
+    }
+
+    /**
+     * Searches and sets up a table with column specifications and data gotten from
+     * searching the database.
+     *
+     * @param hotel the name of the hotel to match
+     * @param city the name of the hotel location to match
+     * @return OccupancyTable consisting of table specs and search results
+     */
+    public OccupancyTable searchTable(String hotel, String city) {
+        try {
+            return new OccupancyTable(db.searchOccupancies(hotel, city));
+        } catch (IOException ex) {
+            log.log(Level.SEVERE, "Retrieving table data failed.", ex);
+            return null;
+        }
+    }
+    
+    /**
+     *
+     * @param o
+     * @param cid
+     */
+    public void book(Occupancy o, String cid){
+        try {
+            o.setOwner(cid);
+            db.setOccupancy(o, false);
+        } catch (IOException ex) {
+            Application.handleException("Booking of occupancy failed", ex);
+        }
+    }
+    
+    public void unbook(Occupancy o){
+        try {
+            o.setOwner("");
+            db.setOccupancy(o, false);
+        } catch (IOException ex) {
+            Application.handleException("Unbooking of occupancy failed", ex);
+        }
+    }
 }

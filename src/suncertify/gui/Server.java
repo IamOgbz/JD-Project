@@ -21,7 +21,7 @@ import suncertify.conn.DBConnection;
  */
 public class Server extends JFrame {
 
-    // Pre defined string to use in the client.
+    // Pre defined string to use in the interface.
     // Used to make changes to control text easier
     private static final String START_BUTTON_TEXT = "Start Server";
     private static final String START_BUTTON_TOOLTIP
@@ -83,8 +83,7 @@ public class Server extends JFrame {
      * configured.
      */
     private JPanel controlPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new FlowLayout(FlowLayout.CENTER));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
         startButton.setToolTipText(START_BUTTON_TOOLTIP);
         startButton.addActionListener(new StartServer());

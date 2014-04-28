@@ -125,7 +125,7 @@ public class Data implements DBAccess {
     /**
      * The object used to construct out record to be written to database file.
      */
-    private StringBuilder recordBuilder;
+    private final StringBuilder recordBuilder;
 
     /**
      * Default constructor that accepts the database path as a parameter.
@@ -159,6 +159,9 @@ public class Data implements DBAccess {
         fields = new LinkedHashMap<>();
         dataBuffer = new LinkedHashMap<>();
         parseHeader();
+        // create the recordbuilder object to be used less record offset
+        recordBuilder = new StringBuilder(
+                new String(new byte[recordLength - recordOffset]));
     }
 
     /**
@@ -340,7 +343,7 @@ public class Data implements DBAccess {
      * @param swapValue replacement value for nulls
      * @return the swapped null array
      */
-    public static String[] swapNulls(String[] toSwap, String swapValue) {
+    private static String[] swapNulls(String[] toSwap, String swapValue) {
         for (int i = 0; i < toSwap.length; i++) {
             if (toSwap[i] == null) {
                 toSwap[i] = swapValue;
@@ -463,9 +466,6 @@ public class Data implements DBAccess {
         int fieldOffset = 0;
         String fieldValue;
         synchronized (recordBuilder) {
-            // create the recordbuilder object to be used less record offset
-            recordBuilder = new StringBuilder(
-                    new String(new byte[recordLength - recordOffset]));
             // for each field name get the number of bytes
             for (int fieldLength : fields.values()) {
                 fieldValue = record[idx];
@@ -720,10 +720,10 @@ public class Data implements DBAccess {
     }
 
     /**
-     * @return a string representation of the fields
+     * @return a copy of the fields
      */
-    public final String getFields() {
-        return fields.toString();
+    public final Map getFields() {
+        return new LinkedHashMap(fields);
     }
 
     /**

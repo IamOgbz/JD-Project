@@ -68,50 +68,50 @@ public class ConfigPanel extends JPanel {
         this.locationField = new JTextField(40);
         this.browseButton = new JButton("Browse");
 
-        GridBagLayout gridLayout = new GridBagLayout();
-        GridBagConstraints gridConstraints = new GridBagConstraints();
-        this.setLayout(gridLayout);
+        GridBagLayout layout = new GridBagLayout();
+        GridBagConstraints contraints = new GridBagConstraints();
+        this.setLayout(layout);
 
         // separate components from each other
-        gridConstraints.insets = new Insets(4, 4, 4, 4);
+        contraints.insets = new Insets(4, 4, 4, 4);
 
         // location row
         JLabel dbLocLbl = new JLabel(DB_LOCATION_LABEL);
-        gridLayout.setConstraints(dbLocLbl, gridConstraints);
+        layout.setConstraints(dbLocLbl, contraints);
         this.add(dbLocLbl);
 
         // locationField.addFocusListener(new AutoSaveConfig(this));
         if (applicationMode == Application.Mode.CLIENT) {
             locationField.setText(config.getProperty(SERVER_ADDRESS));
             locationField.setToolTipText(DB_IP_LOCATION_TOOLTIP);
-            gridConstraints.gridwidth = GridBagConstraints.REMAINDER;
+            contraints.gridwidth = GridBagConstraints.REMAINDER;
         } else {
             locationField.setText(config.getProperty(DATABASE_PATH));
             locationField.setToolTipText(DB_HD_LOCATION_TOOLTIP);
-            gridConstraints.gridwidth = GridBagConstraints.RELATIVE;
+            contraints.gridwidth = GridBagConstraints.RELATIVE;
         }
         locationField.setName(DB_LOCATION_LABEL);
-        gridLayout.setConstraints(locationField, gridConstraints);
+        layout.setConstraints(locationField, contraints);
         this.add(locationField);
 
         if ((applicationMode == Application.Mode.SERVER)
                 || (applicationMode == Application.Mode.STANDALONE)) {
             // to browse for database file location
             browseButton.addActionListener(new ChooseDatabaseFile(this));
-            gridConstraints.gridwidth = GridBagConstraints.REMAINDER;
-            gridLayout.setConstraints(browseButton, gridConstraints);
+            contraints.gridwidth = GridBagConstraints.REMAINDER;
+            layout.setConstraints(browseButton, contraints);
             this.add(browseButton);
         }
 
         if ((applicationMode == Application.Mode.SERVER)
                 || (applicationMode == Application.Mode.CLIENT)) {
             // server port row
-            gridConstraints.weightx = 0.0;
+            contraints.weightx = 0.0;
 
             JLabel serverPortLabel = new JLabel(SERVER_PORT_LABEL);
-            gridConstraints.gridwidth = 1;
-            gridConstraints.anchor = GridBagConstraints.EAST;
-            gridLayout.setConstraints(serverPortLabel, gridConstraints);
+            contraints.gridwidth = 1;
+            contraints.anchor = GridBagConstraints.EAST;
+            layout.setConstraints(serverPortLabel, contraints);
             this.add(serverPortLabel);
 
             // portNumber.addFocusListener(new AutoSaveConfig(this));
@@ -119,9 +119,9 @@ public class ConfigPanel extends JPanel {
             portNumber.setToolTipText(SERVER_PORT_TOOLTIP);
             portNumber.setName(SERVER_PORT_LABEL);
             // set to end of row
-            gridConstraints.gridwidth = GridBagConstraints.REMAINDER;
-            gridConstraints.anchor = GridBagConstraints.WEST;
-            gridLayout.setConstraints(portNumber, gridConstraints);
+            contraints.gridwidth = GridBagConstraints.REMAINDER;
+            contraints.anchor = GridBagConstraints.WEST;
+            layout.setConstraints(portNumber, contraints);
             this.add(portNumber);
         } else {
             // port number is for use

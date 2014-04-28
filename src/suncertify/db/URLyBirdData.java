@@ -9,6 +9,7 @@ import suncertify.gui.Occupancy;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,7 +45,6 @@ public class URLyBirdData implements URLyBirdDBAccess {
     @Override
     public void setOccupancy(Occupancy occupancy, boolean append)
             throws IOException {
-        long recNo = -1, lockCookie = -1;
         String[] data = occupancy.toRecord();
         if (append) {
             try {
@@ -53,6 +53,8 @@ public class URLyBirdData implements URLyBirdDBAccess {
                 throw new IOException("Could not insert occupancy");
             }
         } else {
+            long recNo = -1;
+            long lockCookie = 0;
             try {
                 recNo = occupancy.getAddress();
                 lockCookie = database.lockRecord(recNo);
@@ -69,18 +71,16 @@ public class URLyBirdData implements URLyBirdDBAccess {
 
     @Override
     public Collection<Occupancy> getOccupancies() {
-        return searchOccupancies();
+        return searchOccupancies(); // returns nothing
     }
 
     @Override
     public Collection<Occupancy> searchOccupancies(String... params) {
-        if (params.length > 0) {
-            Data.swapNulls(params, "");
-        } else {
+        if (params == null) {
             params = new String[]{null};
         }
         Map<Long, String[]> result = database.search(params);
-        Collection<Occupancy> occupancies = new LinkedList<>();
+        List<Occupancy> occupancies = new LinkedList<>();
         for (Long recNo : result.keySet()) {
             occupancies.add(new Occupancy(recNo, result.get(recNo)));
         }
