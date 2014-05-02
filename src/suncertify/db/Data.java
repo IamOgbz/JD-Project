@@ -168,7 +168,6 @@ public class Data implements DBAccess {
      * Performs read operations on database file, on instantiation. Parses the
      * header and sets the data offset to the start of the records.
      *
-     * @return the position to start reading the data
      * @throws java.io.IOException
      */
     private void parseHeader() throws IOException {

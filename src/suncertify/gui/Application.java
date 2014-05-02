@@ -73,8 +73,8 @@ public class Application {
             System.err.println("\"alone\" - to start in standalone mode");
             System.err.println("\"server\" - to start in server mode");
             System.err.println("\"\" (nothing) - to start in client mode");
+            System.exit(0);
         }
-        
     }
 
     /**

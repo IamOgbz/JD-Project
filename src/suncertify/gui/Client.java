@@ -138,6 +138,7 @@ public class Client extends JFrame {
         citySearchField = new JTextField(SEARCH_FIELDS_WIDTH);
         searchButton = new JButton(SEARCH_BUTTON_TEXT);
         refreshButton = new JButton(REFRESH_BUTTON_TEXT);
+        refreshButton.setToolTipText(REFRESH_BUTTON_TOOLTIP);
         searchPanel = searchPanel();
         this.add(searchPanel, BorderLayout.NORTH);
 
