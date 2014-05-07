@@ -132,7 +132,10 @@ public class Client extends JFrame {
                 System.exit(0);
             }
         } while (!controller.isConnected());
-
+        
+        // save successful settings
+        configPanel.save();
+        
         // instantiate the search & action controls
         hotelSearchField = new JTextField(SEARCH_FIELDS_WIDTH);
         citySearchField = new JTextField(SEARCH_FIELDS_WIDTH);
