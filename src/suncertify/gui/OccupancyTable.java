@@ -2,6 +2,7 @@ package suncertify.gui;
 
 import java.util.Collection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.swing.JLabel;
 import javax.swing.JTable;
@@ -50,15 +51,29 @@ public class OccupancyTable extends JTable {
     }
 
     /**
-     * Replaces the list of occupancies displayed by the table.
+     * Replaces the list of occupancies displayed by the table and reselects
+     * previous row selected.
      *
      * @param os the new collection of occupancies
      */
     synchronized public final void setData(Collection<Occupancy> os) {
+        Occupancy p = null;
+        int i = -1;
+        if (getSelectedRow() >= 0) {
+            p = data.get(getSelectedRow());
+        }
         clearData();
         data = (List) os;
         for (Occupancy o : data) {
+            // uses the record address as the uid
+            if (p != null && o.getAddress() == p.getAddress()) {
+                i = data.indexOf(o);
+            }
             addOccupancy(o);
+        }
+        // reselect previous index item if there was one and it still exists
+        if (i >= 0 && i < getRowCount()) {
+            setRowSelectionInterval(i, i);
         }
     }
 

@@ -1,5 +1,9 @@
 package suncertify.gui;
 
+import java.awt.Component;
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -36,6 +40,18 @@ public class Application {
          */
         STANDALONE;
     }
+
+    /**
+     * The icon image for the application.
+     */
+    public static final Image icon;
+
+    static {
+        URL url = ClassLoader.getSystemResource("suncertify/resources/icon.png");
+        Toolkit kit = Toolkit.getDefaultToolkit();
+        icon = kit.createImage(url);
+    }
+
     /**
      * The Logger instance. All log messages from this class are routed through
      * this member. The Logger namespace is <code>suncertify</code>.
@@ -61,13 +77,15 @@ public class Application {
             log.warning("Look and feel cannot be used on this platform");
         }
 
+        log.info(icon.toString());
+
         // test for which type of application to run
-        if(args.length == 0 || "alone".equals(args[0])){
+        if (args.length == 0 || "alone".equals(args[0])) {
             new Client(args);
-        } else if ("server".equals(args[0])){
+        } else if ("server".equals(args[0])) {
             new Server();
         } else {
-            log.log(Level.INFO, "Invalid launch parameter passed: ", 
+            log.log(Level.INFO, "Invalid launch parameter passed: ",
                     Arrays.toString(args));
             System.err.println("Valid launch parameters are: ");
             System.err.println("\"alone\" - to start in standalone mode");
@@ -83,13 +101,17 @@ public class Application {
      *
      * @param msg the message to be displayed
      * @param ex the exception that was handled
+     * @param parent the component that calls the dialog
      */
-    public static void handleException(String msg, Exception ex) {
+    public static void handleException(String msg, Exception ex, Component parent) {
         log.log(Level.WARNING, msg, ex);
         String title = ex == null ? "Alert" : "Error";
         int type = ex == null ? INFORMATION_MESSAGE : ERROR_MESSAGE;
         JDialog alertDialog = new JOptionPane(msg, type,
-                JOptionPane.DEFAULT_OPTION).createDialog(title);
+                JOptionPane.DEFAULT_OPTION).createDialog(null, title);
+        if (parent == null) {
+            alertDialog.setIconImage(icon);
+        }
         alertDialog.setVisible(true);
     }
 

@@ -394,6 +394,11 @@ public class Occupancy implements Serializable {
         this.date = date;
     }
 
+    /**
+     * Checks if the occupancy object has an owner (customer id).
+     * 
+     * @return true if the occupancy has an owner set.
+     */
     public boolean hasOwner() {
         return owner != null && owner.length() > 0;
     }

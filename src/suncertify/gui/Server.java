@@ -1,11 +1,14 @@
 package suncertify.gui;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.net.URL;
 import java.rmi.RemoteException;
 import java.util.logging.Logger;
 import javax.swing.JButton;
@@ -36,7 +39,8 @@ public class Server extends JFrame {
      * this member. The Logger namespace is <code>suncertify.gui</code>.
      */
     private static final Logger log = Logger.getLogger("suncertify.gui");
-
+    // Reference to the window frame
+    private final Component frame;
     // configuration panel
     private final ConfigPanel configPanel;
     // control panel
@@ -55,6 +59,10 @@ public class Server extends JFrame {
         super("URLyBird Server");
         this.setDefaultCloseOperation(Server.EXIT_ON_CLOSE);
         this.setResizable(false);
+        
+        frame = this;
+        
+        setIconImage(Application.icon);
 
         this.running = false;
 
@@ -120,9 +128,11 @@ public class Server extends JFrame {
             // start server
             synchronized (startButton) {
                 if (configPanel.getLocationFieldText().isEmpty()) {
-                    Application.handleException("Location not given.", null);
+                    Application.handleException(
+                            "Location not given.", null, frame);
                 } else if (configPanel.getPortNumberText().isEmpty()) {
-                    Application.handleException("Port number not given.", null);
+                    Application.handleException(
+                            "Port number not given.", null, frame);
                 } else {
                     location = configPanel.getLocationFieldText();
                     port = configPanel.getPortNumberText();
@@ -132,10 +142,12 @@ public class Server extends JFrame {
                         DBConnection.register(location, port);
                         running = true;
                     } catch (RemoteException rex) {
-                        Application.handleException("Unable to start server", rex);
+                        Application.handleException(
+                                "Unable to start server", rex, frame);
                     } catch (IllegalArgumentException iex) {
                         Application.handleException(
-                                "Illegal port number.\n"+iex.getMessage(), iex);
+                                "Illegal port number.\n"+iex.getMessage(), 
+                                iex, frame);
                     } finally {
                         if (running) {
                             startButton.setToolTipText(SERVER_STARTED_TOOLTIP);

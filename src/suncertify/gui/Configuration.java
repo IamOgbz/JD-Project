@@ -129,7 +129,7 @@ public class Configuration {
                 } finally {
                     if (loadedProps.isEmpty()) {
                         Application.handleException(
-                                "No user configurations loaded.", null);
+                                "No user configurations loaded.", null, null);
                     }
                 }
             }
@@ -162,7 +162,7 @@ public class Configuration {
             }
         } catch (IOException ex) {
             Application.handleException(
-                    "Unable to save changes to configuration.", ex);
+                    "Unable to save changes to configuration.", ex, null);
         }
     }
 

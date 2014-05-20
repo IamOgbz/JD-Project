@@ -1,6 +1,7 @@
 package suncertify.gui;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -63,6 +64,10 @@ public class Client extends JFrame {
      */
     private final DBConnection.Type connType;
     /**
+     * Reference to the window frame.
+     */
+    private final Component frame;
+    /**
      * The panel that accepts the start up configuration information.
      */
     private final ConfigPanel configPanel;
@@ -119,6 +124,10 @@ public class Client extends JFrame {
         super("URLyBird Client");
         this.setDefaultCloseOperation(Server.EXIT_ON_CLOSE);
         this.setResizable(false);
+        
+        frame = this;
+        
+        setIconImage(Application.icon);
 
         appMode = args.length > 0 ? STANDALONE : CLIENT;
         connType = args.length > 0 ? DIRECT : NETWORK;
@@ -173,6 +182,7 @@ public class Client extends JFrame {
         JOptionPane optionPane = new JOptionPane(configPanel,
                 JOptionPane.QUESTION_MESSAGE);
         JDialog connConfig = optionPane.createDialog("Connect to database");
+        connConfig.setIconImage(Application.icon);
         do {
             connConfig.setVisible(true);
             location = configPanel.getLocationFieldText();
@@ -181,11 +191,11 @@ public class Client extends JFrame {
                 if (location.isEmpty()) {
                     status = -2;
                     Application.handleException(
-                            "No database location specified", null);
+                            "No database location specified", null, this);
                 } else if (port.isEmpty()) {
                     status = -1;
                     Application.handleException(
-                            "No server port number specified", null);
+                            "No server port number specified", null, this);
                 } else {
                     status = 0;
                 }
@@ -227,15 +237,10 @@ public class Client extends JFrame {
         refreshButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int rowIdx = table.getSelectedRow();
                 hotelSearchField.setText("");
                 citySearchField.setText("");
                 searchButton.setEnabled(false);
                 table.setData(controller.getTable().getData());
-                // reselect previous index item
-                if (rowIdx > 0 && rowIdx < table.getRowCount()) {
-                    table.setRowSelectionInterval(rowIdx, rowIdx);
-                }
             }
         });
         panel.add(refreshButton);
@@ -294,14 +299,9 @@ public class Client extends JFrame {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            int rowIdx = table.getSelectedRow();
             String hotel = hotelSearchField.getText();
             String city = citySearchField.getText();
             table.setData(controller.searchTable(hotel, city).getData());
-            // reselect previous index item
-            if (rowIdx > 0 && rowIdx < table.getRowCount()) {
-                table.setRowSelectionInterval(rowIdx, rowIdx);
-            }
         }
 
         @Override
@@ -346,18 +346,19 @@ public class Client extends JFrame {
                     panel.add(idField);
                     JOptionPane pane = new JOptionPane(panel,
                             JOptionPane.QUESTION_MESSAGE);
-                    JDialog dialog = pane.createDialog("Booking Occupancy");
+                    JDialog dialog = pane.createDialog(frame, "Booking Occupancy");
                     do {
                         // notify the user only after the first failed attempt
                         if (notify) {
                             Application.handleException(
-                                    "The customer id must be 8 digits long", null);
+                                    "The customer id must be 8 digits long", 
+                                    null, frame);
                         }
                         dialog.setVisible(true);
                         id = pane.getValue() == null
                                 ? null : idField.getText();
                         notify = true;
-                        log.info(id);
+                        log.log(Level.INFO, "CID: {0}", id);
                     } while (id != null && id.length() != 8);
                     if (id != null) {
                         log.log(Level.INFO, "Book occupancy for customer: {0}", id);
@@ -370,10 +371,6 @@ public class Client extends JFrame {
                     table.setData(controller.getTable().getData());
                 } else {
                     table.setData(controller.searchTable(hotel, city).getData());
-                }
-                // reselect previous index item
-                if (rowIdx > 0 && rowIdx < table.getRowCount()) {
-                    table.setRowSelectionInterval(rowIdx, rowIdx);
                 }
             }
         }

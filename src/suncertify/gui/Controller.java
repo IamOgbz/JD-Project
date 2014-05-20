@@ -2,7 +2,6 @@ package suncertify.gui;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import suncertify.conn.DBConnection;
 import suncertify.conn.RemoteDBAccess;
@@ -51,7 +50,7 @@ public class Controller {
                     connected = true;
                 } catch (IOException ex) {
                     Application.handleException(
-                            "Unable to access database file", ex);
+                            "Unable to read database file", ex, null);
                 }
                 break;
             case NETWORK:
@@ -61,16 +60,18 @@ public class Controller {
                     db = (URLyBirdDBAccess) remote;
                     connected = true;
                 } catch (RemoteException re) {
-                    Application.handleException("Unable to connect to server", re);
+                    Application.handleException(
+                            "Unable to connect to server", re, null);
                 } catch (IllegalArgumentException iae) {
                     Application.handleException("Port (" + port + ") error, "
-                            + iae.getMessage(), iae);
+                            + iae.getMessage(), iae, null);
                 }
                 break;
             default:
                 // should never happen
                 Exception e = new IllegalStateException("Unknown connection type");
-                Application.handleException("Unable to start connection", e);
+                Application.handleException(
+                        "Unable to start connection", e, null);
         }
     }
 
@@ -105,31 +106,39 @@ public class Controller {
         try {
             return new OccupancyTable(db.searchOccupancies(hotel, city));
         } catch (IOException ex) {
-            log.log(Level.SEVERE, "Retrieving table data failed.", ex);
+            Application.handleException("Database connection lost", ex, null);
             return null;
         }
     }
     
     /**
-     *
-     * @param o
-     * @param cid
+     * Book an occupancy by setting a customer id.
+     * 
+     * @param o the occupancy to update
+     * @param cid the customer id
      */
     public void book(Occupancy o, String cid){
         try {
             o.setOwner(cid);
             db.setOccupancy(o, false);
         } catch (IOException ex) {
-            Application.handleException("Booking of occupancy failed", ex);
+            Application.handleException(
+                    "Booking of occupancy failed", ex, null);
         }
     }
     
+    /**
+     * Remove a customer holding an occupancy.
+     * 
+     * @param o the occupancy to update
+     */
     public void unbook(Occupancy o){
         try {
             o.setOwner("");
             db.setOccupancy(o, false);
         } catch (IOException ex) {
-            Application.handleException("Unbooking of occupancy failed", ex);
+            Application.handleException(
+                    "Unbooking of occupancy failed", ex, null);
         }
     }
 }
