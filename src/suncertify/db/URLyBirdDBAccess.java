@@ -3,7 +3,6 @@ package suncertify.db;
 import suncertify.gui.Occupancy;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * Interface for client access to database.

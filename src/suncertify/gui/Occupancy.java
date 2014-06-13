@@ -396,7 +396,7 @@ public class Occupancy implements Serializable {
 
     /**
      * Checks if the occupancy object has an owner (customer id).
-     * 
+     *
      * @return true if the occupancy has an owner set.
      */
     public boolean hasOwner() {
@@ -448,6 +448,64 @@ public class Occupancy implements Serializable {
                 + ", location=" + location + ", size=" + size
                 + ", smoking=" + isSmoking() + ", rate=" + rate
                 + ", date=" + date + ", owner=" + owner + '}';
+    }
+
+    /**
+     * Calculates a true or false value based on matching the fields of the
+     * occupancy object to the parameter.
+     *
+     * @param obj the occupation object to compare with
+     * @return true if all the fields match
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        } else if (getClass() != obj.getClass()) {
+            return false;
+        } else {
+            final Occupancy other = (Occupancy) obj;
+            if (this.address != other.address) {
+                return false;
+            } else if (this.deleted != other.deleted) {
+                return false;
+            } else if (!this.name.equals(other.name)) {
+                return false;
+            } else if (!this.location.equals(other.location)) {
+                return false;
+            } else if (this.size != other.size) {
+                return false;
+            } else if (this.smoking != other.smoking) {
+                return false;
+            } else if (!this.rate.equals(other.rate)) {
+                return false;
+            } else if (!this.date.equals(other.date)) {
+                return false;
+            } else if (!this.owner.equals(other.owner)) {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    /**
+     * Generate a unique integer from all the fields of the object.
+     *
+     * @return a unique integer to identify this object
+     */
+    @Override
+    public int hashCode() {
+        int hash = 17;
+        hash = 73 * hash + (int) this.address;
+        hash = 73 * hash + this.deleted;
+        hash = 73 * hash + this.name.hashCode();
+        hash = 73 * hash + this.location.hashCode();
+        hash = 73 * hash + this.size;
+        hash = 73 * hash + this.smoking;
+        hash = 73 * hash + this.rate.hashCode();
+        hash = 73 * hash + this.date.hashCode();
+        hash = 73 * hash + this.owner.hashCode();
+        return hash;
     }
 
 }

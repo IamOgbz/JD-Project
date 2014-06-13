@@ -1,7 +1,5 @@
 package suncertify.gui;
 
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -155,8 +153,8 @@ public class Configuration {
                         props.setProperty(SERVER_ADDRESS, DEFAULT_HOST_ADDRESS);
                     }
                     props.store(fos, "URLyBird User Configuration");
-                    fos.close();
                 }
+                fos.close();
             } else {
                 throw new IOException("Cannot write to config file");
             }
@@ -164,58 +162,6 @@ public class Configuration {
             Application.handleException(
                     "Unable to save changes to configuration.", ex, null);
         }
-    }
-
-    /**
-     * Provides automatic update of configuration save file on option change.
-     */
-    private class AutoSaveConfig implements FocusListener {
-
-        private final ConfigPanel optPanel;
-
-        /**
-         * Create configuration options saver.
-         *
-         * @param optionPanel the option panel to retrieve values from
-         */
-        public AutoSaveConfig(ConfigPanel optionPanel) {
-            this.optPanel = optionPanel;
-        }
-
-        @Override
-        public void focusLost(FocusEvent fe) {
-            switch (fe.getComponent().getName()) {
-                case ConfigPanel.DB_LOCATION_LABEL:
-                    String location = optPanel.getLocationFieldText().trim();
-                    optPanel.setLocationFieldText(location);
-                    switch (optPanel.getApplicationMode()) {
-                        case CLIENT:
-                            if (!location.equals(getProperty(SERVER_ADDRESS))) {
-                                setProperty(SERVER_ADDRESS, location);
-                            }
-                            break;
-                        case STANDALONE:
-                        case SERVER:
-                            if (!location.equals(getProperty(DATABASE_PATH))) {
-                                setProperty(DATABASE_PATH, location);
-                            }
-                            break;
-                    }
-                    break;
-                case ConfigPanel.SERVER_PORT_LABEL:
-                    String portNumber = optPanel.getPortNumberText();
-                    if (!portNumber.equals(getProperty(SERVER_PORT))) {
-                        setProperty(SERVER_PORT, portNumber);
-                    }
-                    break;
-            }
-        }
-
-        @Override
-        public void focusGained(FocusEvent fe) {
-            // do nothing
-        }
-
     }
 
 }

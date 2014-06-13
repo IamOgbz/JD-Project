@@ -4,11 +4,9 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.net.URL;
 import java.rmi.RemoteException;
 import java.util.logging.Logger;
 import javax.swing.JButton;
@@ -39,8 +37,6 @@ public class Server extends JFrame {
      * this member. The Logger namespace is <code>suncertify.gui</code>.
      */
     private static final Logger log = Logger.getLogger("suncertify.gui");
-    // Reference to the window frame
-    private final Component frame;
     // configuration panel
     private final ConfigPanel configPanel;
     // control panel
@@ -59,8 +55,6 @@ public class Server extends JFrame {
         super("URLyBird Server");
         this.setDefaultCloseOperation(Server.EXIT_ON_CLOSE);
         this.setResizable(false);
-        
-        frame = this;
         
         setIconImage(Application.icon);
 
@@ -94,7 +88,7 @@ public class Server extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
         startButton.setToolTipText(START_BUTTON_TOOLTIP);
-        startButton.addActionListener(new StartServer());
+        startButton.addActionListener(new StartServer(this));
         panel.add(startButton);
 
         exitButton.setToolTipText(EXIT_BUTTON_TOOLTIP);
@@ -122,6 +116,19 @@ public class Server extends JFrame {
      * Class to handle the action of starting the server.
      */
     private class StartServer implements ActionListener {
+        
+        /**
+         * Reference to the parent component
+         */
+        private final Component frame;
+        
+        /**
+         * Default Constructor.
+         * @param frame the parent component
+         */
+        public StartServer(Component frame){
+            this.frame = frame;
+        }
 
         @Override
         public void actionPerformed(ActionEvent ae) {

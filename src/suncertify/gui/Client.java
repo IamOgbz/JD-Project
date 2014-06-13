@@ -64,10 +64,6 @@ public class Client extends JFrame {
      */
     private final DBConnection.Type connType;
     /**
-     * Reference to the window frame.
-     */
-    private final Component frame;
-    /**
      * The panel that accepts the start up configuration information.
      */
     private final ConfigPanel configPanel;
@@ -124,9 +120,7 @@ public class Client extends JFrame {
         super("URLyBird Client");
         this.setDefaultCloseOperation(Server.EXIT_ON_CLOSE);
         this.setResizable(false);
-        
-        frame = this;
-        
+
         setIconImage(Application.icon);
 
         appMode = args.length > 0 ? STANDALONE : CLIENT;
@@ -141,10 +135,10 @@ public class Client extends JFrame {
                 System.exit(0);
             }
         } while (!controller.isConnected());
-        
+
         // save successful settings
         configPanel.save();
-        
+
         // instantiate the search & action controls
         hotelSearchField = new JTextField(SEARCH_FIELDS_WIDTH);
         citySearchField = new JTextField(SEARCH_FIELDS_WIDTH);
@@ -260,11 +254,11 @@ public class Client extends JFrame {
         panel.setLayout(layout);
 
         unbookButton.setEnabled(false);
-        unbookButton.addActionListener(new BookingHandler());
+        unbookButton.addActionListener(new BookingHandler(this));
         panel.add(bookButton);
 
         bookButton.setEnabled(false);
-        bookButton.addActionListener(new BookingHandler());
+        bookButton.addActionListener(new BookingHandler(this));
         panel.add(unbookButton);
 
         return panel;
@@ -283,7 +277,7 @@ public class Client extends JFrame {
 
         table = controller.getTable();
         ListSelectionModel rowSelectionModel = table.getSelectionModel();
-        rowSelectionModel.addListSelectionListener(new BookingHandler());
+        rowSelectionModel.addListSelectionListener(new BookingHandler(this));
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setPreferredSize(new Dimension(0, TABLE_HEIGHT));
@@ -328,6 +322,19 @@ public class Client extends JFrame {
      */
     private class BookingHandler implements ActionListener, ListSelectionListener {
 
+        /**
+         * Reference to the parent component.
+         */
+        private final Component frame;
+        
+        /**
+         * Default Constructor.
+         * @param frame the parent component
+         */
+        public BookingHandler(Component frame){
+            this.frame = frame;
+        }
+
         @Override
         public void actionPerformed(ActionEvent e) {
             // if there is a selected row
@@ -351,14 +358,14 @@ public class Client extends JFrame {
                         // notify the user only after the first failed attempt
                         if (notify) {
                             Application.handleException(
-                                    "The customer id must be 8 digits long", 
+                                    "The customer id must be 8 digits long",
                                     null, frame);
                         }
                         dialog.setVisible(true);
                         id = pane.getValue() == null
                                 ? null : idField.getText();
                         notify = true;
-                        log.log(Level.INFO, "CID: {0}", id);
+                        log.log(Level.INFO, "Customer ID: {0}", id);
                     } while (id != null && id.length() != 8);
                     if (id != null) {
                         log.log(Level.INFO, "Book occupancy for customer: {0}", id);

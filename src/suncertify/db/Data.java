@@ -47,6 +47,11 @@ public class Data implements DBAccess {
     public static final short FIELD_LENGTH_BYTES = 2;
 
     /**
+     * The random file access mode.
+     */
+    private static final String accessMode = "rw";
+
+    /**
      * The read write lock used to maintain database operations concurrency.
      */
     private static final ReentrantReadWriteLock dbRWLock
@@ -153,7 +158,7 @@ public class Data implements DBAccess {
         if (dbPath != null) {
             log.log(Level.INFO, "Attempting to use database path: {0}",
                     new Object[]{dbPath});
-            dbFile = new RandomAccessFile(dbPath, "rw");
+            dbFile = new RandomAccessFile(dbPath, accessMode);
         }
 
         fields = new LinkedHashMap<>();
@@ -488,7 +493,9 @@ public class Data implements DBAccess {
     }
 
     /**
-     * Writes a record to the database file at any location.
+     * Writes a record to the database file at any location specified. Calls to
+     * this method should ensure that changes to individual records are still
+     * managed by lock cookies.
      *
      * @param recNo the location in the file to write the record
      * @param data array of strings representing a record, where each item is a
@@ -498,8 +505,7 @@ public class Data implements DBAccess {
      */
     private void writeRecord(long recNo, String[] data)
             throws IOException {
-        // -- TODO -- implement record level locking
-        // prevent database file from being read/edited while being writen
+        // prevent database file from being read/edited while being written
         dbRWLock.writeLock().lock();
         try {
             // write into database file, skipping the record offset bytes
@@ -677,7 +683,7 @@ public class Data implements DBAccess {
             log.info("Trying to acquire write lock");
             dbRWLock.writeLock().lock();
             try {
-                log.info("Preparing to lock");
+                log.info("Write lock acquired, locking record...");
                 // use system nano time as seed to generate unique cookie
                 byte[] seed = String.valueOf(System.nanoTime()).getBytes();
                 long cookie = new SecureRandom(seed).nextLong();
