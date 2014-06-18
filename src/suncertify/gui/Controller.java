@@ -95,8 +95,8 @@ public class Controller {
     }
 
     /**
-     * Searches and sets up a table with column specifications and data gotten from
-     * searching the database.
+     * Searches and sets up a table with column specifications and data gotten
+     * from searching the database.
      *
      * @param hotel the name of the hotel to match
      * @param city the name of the hotel location to match
@@ -110,32 +110,44 @@ public class Controller {
             return null;
         }
     }
-    
+
     /**
      * Book an occupancy by setting a customer id.
-     * 
+     *
      * @param o the occupancy to update
      * @param cid the customer id
      */
-    public void book(Occupancy o, String cid){
+    public void book(Occupancy o, String cid) {
         try {
-            o.setOwner(cid);
-            db.setOccupancy(o, false);
+            o = db.getOccupancy(o.getAddress());
+            if (o.hasOwner()) {
+                Application.handleException(
+                        "Occupancy already booked", null, null);
+            } else {
+                o.setOwner(cid);
+                db.setOccupancy(o, false);
+            }
         } catch (IOException ex) {
             Application.handleException(
                     "Booking of occupancy failed", ex, null);
         }
     }
-    
+
     /**
      * Remove a customer holding an occupancy.
-     * 
+     *
      * @param o the occupancy to update
      */
-    public void unbook(Occupancy o){
+    public void unbook(Occupancy o) {
         try {
-            o.setOwner("");
-            db.setOccupancy(o, false);
+            Occupancy dbo = db.getOccupancy(o.getAddress());
+            if (dbo.hasOwner() && !dbo.getOwner().equals(o.getOwner())) {
+                Application.handleException(
+                        "Occupancy booked by another client", null, null);
+            } else {
+                o.setOwner("");
+                db.setOccupancy(o, false);
+            }
         } catch (IOException ex) {
             Application.handleException(
                     "Unbooking of occupancy failed", ex, null);
